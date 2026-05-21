@@ -1,12 +1,11 @@
 "use client"
 
 import { useState, useMemo, useEffect, useRef } from "react"
-import { communication, benevoles as benevolesMock } from "@/lib/mock-data"
-import { Calendar, Columns3, Check, X, RotateCcw, Plus, Pencil, CalendarDays, Shuffle, CheckCircle2, XCircle, Users, ChevronRight } from "lucide-react"
+import { benevoles as benevolesMock } from "@/lib/mock-data"
+import { Calendar, Columns3, Check, X, RotateCcw, Plus, Shuffle, CheckCircle2, XCircle, Users, ChevronRight } from "lucide-react"
 import SlideOver, { Field, Input, Textarea, Select, FormRow, SaveButton, DeleteButton } from "@/components/SlideOver"
 
 const STORAGE_POSTS        = "asso-communication-posts"
-const STORAGE_EVENTS       = "asso-communication-events"
 const STORAGE_INTEGRATIONS = "asso-communication-integrations"
 const S_SESSIONS           = "asso-ateliers-sessions"
 const S_BENEFICIAIRES      = "asso-beneficiaires"
@@ -21,7 +20,6 @@ function load<T>(key: string, fallback: T): T {
 // ──────────────────────────────────────────────
 type ValidationStatus = "brouillon" | "à valider" | "validé" | "publié"
 type Plateforme       = "LinkedIn" | "Instagram" | "Facebook"
-type TypeEvenement    = "atelier" | "événement" | "cérémonie"
 type CategoriePost    = "atelier" | "autre"
 
 interface PlatformeContent {
@@ -41,13 +39,6 @@ interface PostParticipants {
   apprenantes: PostParticipant[]
   benevoles: string[]
   formatrices: string[]
-}
-
-interface Evenement {
-  id: number
-  nom: string
-  date: string
-  type: TypeEvenement
 }
 
 interface IntegrationsConfig {
@@ -252,52 +243,6 @@ function CalendrierTab({ posts, onNewPost }: { posts: Post[]; onNewPost: (date: 
 }
 
 // ──────────────────────────────────────────────
-// Onglet Événements
-// ──────────────────────────────────────────────
-const TYPE_OPTIONS: { value: TypeEvenement; label: string; cls: string }[] = [
-  { value: "atelier",   label: "Atelier",   cls: "bg-ateliers-light text-ateliers-dark" },
-  { value: "événement", label: "Événement", cls: "bg-communication-light text-communication-dark" },
-  { value: "cérémonie", label: "Cérémonie", cls: "bg-finances-light text-finances-dark" },
-]
-
-function EventsTab({ events, onEdit, onNew }: { events: Evenement[]; onEdit: (e: Evenement) => void; onNew: () => void }) {
-  const sorted = [...events].sort((a, b) => a.date.localeCompare(b.date))
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted">Ces événements apparaissent dans le calendrier éditorial et peuvent être liés aux posts.</p>
-        <button onClick={onNew} className="flex items-center gap-1.5 text-sm font-medium bg-slate-900 text-white px-4 py-2 rounded-xl hover:bg-slate-700 transition-colors">
-          <Plus size={14} /> Nouvel événement
-        </button>
-      </div>
-      {sorted.length === 0 ? (
-        <div className="text-center py-16 text-muted text-sm">
-          <CalendarDays size={32} className="mx-auto mb-3 opacity-30" />
-          Aucun événement. Commencez par en créer un.
-        </div>
-      ) : (
-        <div className="bg-surface border border-border rounded-2xl overflow-hidden">
-          {sorted.map((e, i) => {
-            const typeOpt = TYPE_OPTIONS.find((t) => t.value === e.type) ?? TYPE_OPTIONS[1]
-            return (
-              <div key={e.id} className={`flex items-center gap-4 px-5 py-4 group hover:bg-slate-50 transition-colors ${i > 0 ? "border-t border-border" : ""}`}>
-                <div className="text-center min-w-12 shrink-0">
-                  <p className="text-lg font-bold text-foreground leading-none">{new Date(e.date).toLocaleDateString("fr-FR", { day: "numeric" })}</p>
-                  <p className="text-[10px] text-muted uppercase tracking-wide">{new Date(e.date).toLocaleDateString("fr-FR", { month: "short" })}</p>
-                </div>
-                <div className="flex-1 min-w-0"><p className="text-sm font-semibold text-foreground">{e.nom}</p></div>
-                <span className={`text-xs font-medium px-2.5 py-1 rounded-full shrink-0 ${typeOpt.cls}`}>{typeOpt.label}</span>
-                <button onClick={() => onEdit(e)} className="p-1.5 rounded-lg hover:bg-slate-200 text-muted opacity-0 group-hover:opacity-100 transition-all"><Pencil size={13} /></button>
-              </div>
-            )
-          })}
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ──────────────────────────────────────────────
 // Kanban de validation
 // ──────────────────────────────────────────────
 function KanbanTab({ posts, onChangeStatus, onEdit }: {
@@ -471,8 +416,6 @@ function IntegrationsTab({ config, onChange, onTest, testStatus }: {
 // ──────────────────────────────────────────────
 // Page principale
 // ──────────────────────────────────────────────
-const eventsInitiaux: Evenement[] = communication.evenements as Evenement[]
-
 const emptyParticipants = (): PostParticipants => ({ apprenantes: [], benevoles: [], formatrices: [] })
 
 const emptyPost = (): Omit<Post, "id"> => ({
@@ -482,19 +425,15 @@ const emptyPost = (): Omit<Post, "id"> => ({
   media: [],
   plateforme: ["Instagram"],
   plateformeContenu: {},
-  statut: "brouillon", auteur: "", evenement: null,
+  statut: "brouillon", auteur: "",
   sessionId: null,
   participants: emptyParticipants(),
-})
-
-const emptyEvent = (): Omit<Evenement, "id"> => ({
-  nom: "", date: new Date().toISOString().split("T")[0], type: "événement",
 })
 
 const ALL_PLATEFORMES: Plateforme[] = ["LinkedIn", "Instagram", "Facebook"]
 
 export default function CommunicationPage() {
-  const [tab, setTab] = useState<"calendrier" | "kanban" | "evenements" | "integrations">("calendrier")
+  const [tab, setTab] = useState<"calendrier" | "kanban" | "integrations">("calendrier")
 
   const [posts, setPosts] = useState<Post[]>(postsInitiaux)
   const [slideOpen, setSlideOpen] = useState(false)
@@ -503,11 +442,6 @@ export default function CommunicationPage() {
   const [activePlatformTab, setActivePlatformTab] = useState<Plateforme>("Instagram")
   const [newFormatrice, setNewFormatrice] = useState("")
   const fileInputRef = useRef<HTMLInputElement>(null)
-
-  const [events, setEvents] = useState<Evenement[]>(eventsInitiaux)
-  const [eventSlideOpen, setEventSlideOpen] = useState(false)
-  const [editingEvent, setEditingEvent] = useState<Evenement | null>(null)
-  const [eventForm, setEventForm] = useState<Omit<Evenement, "id">>(emptyEvent())
 
   const [integrations, setIntegrations] = useState<IntegrationsConfig>(integrationsInitial)
   const [webhookTestStatus, setWebhookTestStatus] = useState<"idle" | "sending" | "ok" | "error">("idle")
@@ -519,14 +453,12 @@ export default function CommunicationPage() {
 
   useEffect(() => {
     setPosts(load(STORAGE_POSTS, postsInitiaux))
-    setEvents(load(STORAGE_EVENTS, eventsInitiaux))
     setIntegrations(load(STORAGE_INTEGRATIONS, integrationsInitial))
     setSessions(load(S_SESSIONS, []))
     setBeneficiaires(load(S_BENEFICIAIRES, []))
   }, [])
 
   function persistPosts(data: Post[]) { setPosts(data); localStorage.setItem(STORAGE_POSTS, JSON.stringify(data)) }
-  function persistEvents(data: Evenement[]) { setEvents(data); localStorage.setItem(STORAGE_EVENTS, JSON.stringify(data)) }
   function persistIntegrations(data: IntegrationsConfig) { setIntegrations(data); localStorage.setItem(STORAGE_INTEGRATIONS, JSON.stringify(data)) }
 
   async function triggerWebhook(post: Post) {
@@ -536,7 +468,7 @@ export default function CommunicationPage() {
       await fetch(integrations.zapierWebhookUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ titre: post.titre, contenu: post.contenu ?? "", plateformes: post.plateforme, auteur: post.auteur, date: post.date, evenement: post.evenement ?? null }),
+        body: JSON.stringify({ titre: post.titre, contenu: post.contenu ?? "", plateformes: post.plateforme, auteur: post.auteur, date: post.date }),
       })
     } catch { /* silently ignore */ }
   }
@@ -751,23 +683,6 @@ export default function CommunicationPage() {
     [form.participants?.apprenantes, beneficiaires]
   )
 
-  function openNewEvent() { setEditingEvent(null); setEventForm(emptyEvent()); setEventSlideOpen(true) }
-  function openEditEvent(e: Evenement) { setEditingEvent(e); setEventForm({ nom: e.nom, date: e.date, type: e.type }); setEventSlideOpen(true) }
-
-  function handleSaveEvent() {
-    if (!eventForm.nom.trim()) return
-    const updated = editingEvent
-      ? events.map((e) => e.id === editingEvent.id ? { ...eventForm, id: editingEvent.id } : e)
-      : [...events, { ...eventForm, id: Date.now() }]
-    persistEvents(updated); setEventSlideOpen(false)
-  }
-
-  function handleDeleteEvent() {
-    if (!editingEvent) return
-    persistEvents(events.filter((e) => e.id !== editingEvent.id))
-    setEventSlideOpen(false)
-  }
-
   const currentYear    = new Date().getFullYear()
   const debutAnnee     = new Date(currentYear, 0, 1)
   const nbBrouillons   = posts.filter((p) => p.statut === "brouillon").length
@@ -784,11 +699,9 @@ export default function CommunicationPage() {
           <h1 className="text-2xl font-bold text-foreground">Communication</h1>
           <p className="text-sm text-muted mt-1">Calendrier éditorial & circuit de validation des posts</p>
         </div>
-        {tab !== "evenements" && (
-          <button onClick={openNew} className="flex items-center gap-1.5 text-sm font-medium bg-slate-900 text-white px-4 py-2 rounded-xl hover:bg-slate-700 transition-colors">
-            <Plus size={14} /> Nouveau post
-          </button>
-        )}
+        <button onClick={openNew} className="flex items-center gap-1.5 text-sm font-medium bg-slate-900 text-white px-4 py-2 rounded-xl hover:bg-slate-700 transition-colors">
+          <Plus size={14} /> Nouveau post
+        </button>
       </header>
 
       <SlideOver open={slideOpen} onClose={() => setSlideOpen(false)} title={editing ? "Modifier le post" : "Nouveau post"} width="lg">
@@ -1024,17 +937,9 @@ export default function CommunicationPage() {
             </div>
           )}
 
-          <FormRow>
-            <Field label="Date programmée">
-              <Input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} />
-            </Field>
-            <Field label="Événement lié">
-              <Select value={form.evenement ?? ""} onChange={e => setForm(f => ({ ...f, evenement: e.target.value || null }))}>
-                <option value="">— Aucun —</option>
-                {events.map((e) => <option key={e.id} value={e.nom}>{e.nom}</option>)}
-              </Select>
-            </Field>
-          </FormRow>
+          <Field label="Date programmée">
+            <Input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} />
+          </Field>
 
           <Field label="Auteur">
             <Input placeholder="Nadjat" value={form.auteur} onChange={e => setForm(f => ({ ...f, auteur: e.target.value }))} />
@@ -1042,26 +947,6 @@ export default function CommunicationPage() {
 
           <SaveButton />
           {editing && <DeleteButton onClick={handleDelete} />}
-        </form>
-      </SlideOver>
-
-      <SlideOver open={eventSlideOpen} onClose={() => setEventSlideOpen(false)} title={editingEvent ? `Modifier — ${editingEvent.nom}` : "Nouvel événement"} width="md">
-        <form onSubmit={(e) => { e.preventDefault(); handleSaveEvent() }} className="flex flex-col gap-4">
-          <Field label="Nom de l'événement" required>
-            <Input placeholder="Ex: Portes ouvertes" value={eventForm.nom} onChange={e => setEventForm(f => ({ ...f, nom: e.target.value }))} />
-          </Field>
-          <Field label="Date" required>
-            <Input type="date" value={eventForm.date} onChange={e => setEventForm(f => ({ ...f, date: e.target.value }))} />
-          </Field>
-          <Field label="Type">
-            <Select value={eventForm.type} onChange={e => setEventForm(f => ({ ...f, type: e.target.value as TypeEvenement }))}>
-              <option value="atelier">Atelier</option>
-              <option value="événement">Événement</option>
-              <option value="cérémonie">Cérémonie</option>
-            </Select>
-          </Field>
-          <SaveButton />
-          {editingEvent && <DeleteButton onClick={handleDeleteEvent} />}
         </form>
       </SlideOver>
 
@@ -1082,10 +967,9 @@ export default function CommunicationPage() {
 
       <div className="flex gap-1 mb-6 bg-slate-100 p-1 rounded-lg w-fit">
         {([
-          { id: "calendrier",   icon: <Calendar size={14} />,     label: "Calendrier" },
-          { id: "kanban",       icon: <Columns3 size={14} />,     label: "Validation" },
-          { id: "evenements",   icon: <CalendarDays size={14} />, label: "Événements" },
-          { id: "integrations", icon: <Shuffle size={14} />,      label: "Intégrations" },
+          { id: "calendrier",   icon: <Calendar size={14} />, label: "Calendrier" },
+          { id: "kanban",       icon: <Columns3 size={14} />, label: "Validation" },
+          { id: "integrations", icon: <Shuffle size={14} />,  label: "Intégrations" },
         ] as const).map(t => (
           <button
             key={t.id}
@@ -1093,7 +977,6 @@ export default function CommunicationPage() {
             className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${tab === t.id ? "bg-surface text-foreground shadow-sm" : "text-muted hover:text-foreground"}`}
           >
             {t.icon} {t.label}
-            {t.id === "evenements" && <span className="text-[10px] bg-absences-light text-absences-dark px-1.5 py-0.5 rounded-full font-semibold">{events.length}</span>}
             {t.id === "integrations" && integrations.zapierEnabled && integrations.zapierWebhookUrl && <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />}
           </button>
         ))}
@@ -1101,7 +984,6 @@ export default function CommunicationPage() {
 
       {tab === "calendrier"   && <CalendrierTab posts={posts} onNewPost={openNewWithDate} />}
       {tab === "kanban"       && <KanbanTab posts={posts} onChangeStatus={changeStatus} onEdit={openEdit} />}
-      {tab === "evenements"   && <EventsTab events={events} onEdit={openEditEvent} onNew={openNewEvent} />}
       {tab === "integrations" && <IntegrationsTab config={integrations} onChange={persistIntegrations} onTest={testWebhook} testStatus={webhookTestStatus} />}
     </div>
   )
