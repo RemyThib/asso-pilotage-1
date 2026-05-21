@@ -107,7 +107,7 @@ final_comprehensionEcrite | final_comprehensionOrale | final_expressionEcrite | 
 
         <h3 className="text-base font-semibold text-foreground">Sheet &quot;Ateliers&quot;</h3>
         <pre className="bg-slate-900 text-slate-100 rounded-xl p-4 text-xs font-mono overflow-x-auto">{`id | titre | description | date | heure | duree | salle | formatrice | statut
-dateDebut | dateFin
+periode
 ageMin | ageMax | tailleGroupeCible | ratioEncadrement | mixerNiveaux
 comp_comprehensionEcrite | comp_comprehensionOrale | comp_expressionEcrite | comp_expressionOrale
 taches | besoins | etapes | personnesImpliqueesIds

@@ -13,9 +13,6 @@ import {
   emptyFiche,
   migrateFiche,
   encadrantsRequis,
-  formatPeriode,
-  dureePeriode,
-  periodeValide,
   type FicheAtelier,
 } from "@/lib/atelier"
 import {
@@ -238,11 +235,9 @@ function AteliersTab({
             <span>⏱ {s.duree}</span>
             {s.salle     && <span>📍 {s.salle}</span>}
             {s.formatrice && <span>👩‍🏫 {s.formatrice}</span>}
-            {periodeValide(s.dateDebut, s.dateFin) && (
+            {s.periode && (
               <span className="text-ateliers-dark font-medium flex items-center gap-1">
-                <CalendarDays size={10} />
-                {formatPeriode(s.dateDebut, s.dateFin)}
-                <span className="text-muted">· {dureePeriode(s.dateDebut, s.dateFin)}</span>
+                <CalendarDays size={10} /> {s.periode}
               </span>
             )}
           </div>
@@ -750,25 +745,82 @@ export default function AteliersPage() {
         width="lg"
       >
         <form onSubmit={e => { e.preventDefault(); handleSaveSession() }} className="flex flex-col gap-4">
+          {/* ── Titre ── */}
           <Field label="Titre" required>
             <Input
-              placeholder="Ex : Initiation HTML/CSS"
+              placeholder="Ex : Atelier théâtre"
               value={sessionForm.titre}
               onChange={e => setSessionForm(f => ({ ...f, titre: e.target.value }))}
             />
           </Field>
-          <Field label="Description">
-            <Textarea
-              placeholder="Objectifs, contenu…"
-              value={sessionForm.description}
-              onChange={e => setSessionForm(f => ({ ...f, description: e.target.value }))}
+
+          {/* ── Date + horaires / lieu / encadrant ── */}
+          <FormRow>
+            <Field label="Date">
+              <Input
+                type="date"
+                value={sessionForm.date}
+                onChange={e => setSessionForm(f => ({ ...f, date: e.target.value }))}
+              />
+            </Field>
+            <Field label="Heure">
+              <Input
+                placeholder="14h00"
+                value={sessionForm.heure}
+                onChange={e => setSessionForm(f => ({ ...f, heure: e.target.value }))}
+              />
+            </Field>
+          </FormRow>
+          <FormRow>
+            <Field label="Durée">
+              <Input
+                placeholder="2h"
+                value={sessionForm.duree}
+                onChange={e => setSessionForm(f => ({ ...f, duree: e.target.value }))}
+              />
+            </Field>
+            <Field label="Salle">
+              <Input
+                placeholder="Salle A"
+                value={sessionForm.salle}
+                onChange={e => setSessionForm(f => ({ ...f, salle: e.target.value }))}
+              />
+            </Field>
+          </FormRow>
+          <FormRow>
+            <Field label="Formatrice">
+              <Input
+                placeholder="Somayeh"
+                value={sessionForm.formatrice}
+                onChange={e => setSessionForm(f => ({ ...f, formatrice: e.target.value }))}
+              />
+            </Field>
+            <Field label="Statut">
+              <Select
+                value={sessionForm.statut}
+                onChange={e => setSessionForm(f => ({ ...f, statut: e.target.value as SessionStatut }))}
+              >
+                <option>planifié</option>
+                <option>en cours</option>
+                <option>terminé</option>
+                <option>annulé</option>
+              </Select>
+            </Field>
+          </FormRow>
+
+          {/* ── Période concernée (champ libre) ── */}
+          <Field label="Période concernée">
+            <Input
+              placeholder="Ex : Vacances de printemps 2026"
+              value={sessionForm.periode}
+              onChange={e => setSessionForm(f => ({ ...f, periode: e.target.value }))}
             />
           </Field>
 
-          {/* ── Compétences ciblées ── */}
+          {/* ── Compétences travaillées ── */}
           <div className="rounded-xl border border-ateliers/30 bg-ateliers-light/40 p-3">
             <p className="text-xs font-semibold text-ateliers-dark uppercase tracking-wider mb-2">
-              Compétences ciblées
+              Compétences travaillées
             </p>
             <p className="text-[11px] text-muted mb-3">
               Cochez les thématiques du test de positionnement qui seront travaillées.
@@ -800,7 +852,7 @@ export default function AteliersPage() {
             </div>
             {sessionForm.competencesCiblees.length === 0 && (
               <p className="text-[11px] text-amber-700 mt-2 flex items-center gap-1">
-                <AlertTriangle size={11} /> Aucune compétence cochée — l'auto-composition de groupes sera désactivée pour cet atelier.
+                <AlertTriangle size={11} /> Aucune compétence cochée — l&apos;auto-composition de groupes sera désactivée pour cet atelier.
               </p>
             )}
           </div>
@@ -852,112 +904,6 @@ export default function AteliersPage() {
               </span>
             </label>
           </div>
-
-          <FormRow>
-            <Field label="Date">
-              <Input
-                type="date"
-                value={sessionForm.date}
-                onChange={e => setSessionForm(f => ({ ...f, date: e.target.value }))}
-              />
-            </Field>
-            <Field label="Heure">
-              <Input
-                placeholder="14h00"
-                value={sessionForm.heure}
-                onChange={e => setSessionForm(f => ({ ...f, heure: e.target.value }))}
-              />
-            </Field>
-          </FormRow>
-
-          {/* ── Période (vacances scolaires) ── */}
-          <div className="rounded-xl border border-border bg-surface/50 p-3">
-            <p className="text-xs font-semibold text-foreground uppercase tracking-wider mb-1">
-              Période concernée
-            </p>
-            <p className="text-[11px] text-muted mb-3">
-              Optionnel — utile si l&apos;atelier s&apos;étend sur plusieurs séances
-              (ex : vacances scolaires).
-            </p>
-            <FormRow>
-              <Field label="Date de début">
-                <Input
-                  type="date"
-                  value={sessionForm.dateDebut ?? ""}
-                  onChange={e => setSessionForm(f => ({
-                    ...f, dateDebut: e.target.value === "" ? null : e.target.value,
-                  }))}
-                />
-              </Field>
-              <Field label="Date de fin">
-                <Input
-                  type="date"
-                  value={sessionForm.dateFin ?? ""}
-                  min={sessionForm.dateDebut ?? undefined}
-                  onChange={e => setSessionForm(f => ({
-                    ...f, dateFin: e.target.value === "" ? null : e.target.value,
-                  }))}
-                />
-              </Field>
-            </FormRow>
-            {(() => {
-              const label = formatPeriode(sessionForm.dateDebut, sessionForm.dateFin)
-              const duree = dureePeriode(sessionForm.dateDebut, sessionForm.dateFin)
-              if (label) {
-                return (
-                  <p className="mt-2 text-xs text-ateliers-dark bg-ateliers-light px-3 py-1.5 rounded-lg inline-flex items-center gap-2">
-                    <CalendarDays size={11} /> <span className="font-medium">{label}</span>
-                    <span className="text-muted">· {duree}</span>
-                  </p>
-                )
-              }
-              if (sessionForm.dateDebut && sessionForm.dateFin) {
-                return (
-                  <p className="mt-2 text-xs text-red-700 bg-red-50 px-3 py-1.5 rounded-lg inline-flex items-center gap-1">
-                    <AlertTriangle size={11} /> La date de fin doit être après la date de début.
-                  </p>
-                )
-              }
-              return null
-            })()}
-          </div>
-
-          <FormRow>
-            <Field label="Durée">
-              <Input
-                placeholder="2h"
-                value={sessionForm.duree}
-                onChange={e => setSessionForm(f => ({ ...f, duree: e.target.value }))}
-              />
-            </Field>
-            <Field label="Salle">
-              <Input
-                placeholder="Salle A"
-                value={sessionForm.salle}
-                onChange={e => setSessionForm(f => ({ ...f, salle: e.target.value }))}
-              />
-            </Field>
-          </FormRow>
-          <FormRow>
-            <Field label="Formatrice">
-              <Input
-                placeholder="Somayeh"
-                value={sessionForm.formatrice}
-                onChange={e => setSessionForm(f => ({ ...f, formatrice: e.target.value }))}
-              />
-            </Field>
-            <Field label="Statut">
-              <Select
-                value={sessionForm.statut}
-                onChange={e => setSessionForm(f => ({ ...f, statut: e.target.value as SessionStatut }))}
-              >
-                <option>planifié</option>
-                <option>en cours</option>
-                <option>terminé</option>
-                <option>annulé</option>
-              </Select>
-            </Field>
-          </FormRow>
 
           {/* ── Organisation ── */}
           <div className="rounded-xl border border-border bg-surface/50 p-3">

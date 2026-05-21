@@ -44,8 +44,7 @@ export const ateliers = {
       besoins: ["Salle avec espace dégagé", "Accessoires (chapeaux, foulards)", "1 formatrice + 1 bénévole"],
       etapes: ["Présentation des participants (10 min)", "Échauffement vocal (20 min)", "Lecture des scripts (30 min)", "Jeu et restitution (50 min)", "Débrief collectif (10 min)"],
       personnesImpliqueesIds: [2, 4],
-      // Vacances de printemps 2026 (zone B)
-      dateDebut: "2026-04-13", dateFin: "2026-04-24",
+      periode: "Vacances de printemps 2026 (zone B)",
     },
     {
       id: 2, titre: "Logique & Algorithmie", description: "Résolution de problèmes et pensée computationnelle.",
@@ -54,8 +53,7 @@ export const ateliers = {
       competencesCiblees: ["comprehensionEcrite", "expressionEcrite"],
       ageMin: 10, ageMax: 13, tailleGroupeCible: 10, ratioEncadrement: null, mixerNiveaux: false,
       taches: [], besoins: [], etapes: [], personnesImpliqueesIds: [],
-      // Séance unique : pas de période
-      dateDebut: null, dateFin: null,
+      periode: "",
     },
     {
       id: 3, titre: "Atelier exposé", description: "Préparation et présentation d'un exposé court, en binôme avec accompagnement renforcé.",
@@ -67,8 +65,7 @@ export const ateliers = {
       besoins: ["1 bénévole pour 2 bénéficiaires", "Salle avec tableau", "Ordinateurs (1 par binôme)"],
       etapes: ["Choix du sujet (30 min)", "Recherche documentaire (45 min)", "Rédaction du plan (45 min)", "Répétitions en binôme (45 min)", "Présentation au groupe (15 min)"],
       personnesImpliqueesIds: [3, 4, 5],
-      // Premières semaines des vacances d'été
-      dateDebut: "2026-07-06", dateFin: "2026-07-17",
+      periode: "Premières semaines des vacances d'été 2026",
     },
     {
       id: 4, titre: "Initiation HTML/CSS — séance 1", description: "Découverte des bases du web.",
@@ -77,8 +74,7 @@ export const ateliers = {
       competencesCiblees: ["comprehensionEcrite"],
       ageMin: 6, ageMax: 9, tailleGroupeCible: 8, ratioEncadrement: null, mixerNiveaux: false,
       taches: [], besoins: [], etapes: [], personnesImpliqueesIds: [],
-      // Vacances d'hiver 2026 (zone B)
-      dateDebut: "2026-02-23", dateFin: "2026-03-06",
+      periode: "Vacances d'hiver 2026 (zone B)",
     },
   ],
   // Bénéficiaires (enfants + contact parent)

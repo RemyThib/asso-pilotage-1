@@ -63,11 +63,10 @@ export interface FicheAtelier {
   etapes: string[]
   personnesImpliqueesIds: number[]
 
-  /** Période sur laquelle s'étend l'atelier (ex : vacances scolaires).
-   *  Indépendante du champ `date` de la session qui reste la date principale
-   *  de référence. null = atelier sur une seule séance, pas de période. */
-  dateDebut: string | null
-  dateFin:   string | null
+  /** Période sur laquelle s'étend l'atelier — saisie libre.
+   *  Ex : "Vacances de printemps 2026", "du 13 au 24 avril", "2 semaines".
+   *  Vide si l'atelier tient sur une seule séance. */
+  periode: string
 }
 
 // ──────────────────────────────────────────────
@@ -86,14 +85,27 @@ export function emptyFiche(): FicheAtelier {
     besoins: [],
     etapes: [],
     personnesImpliqueesIds: [],
-    dateDebut: null,
-    dateFin:   null,
+    periode: "",
   }
+}
+
+/** Forme élargie acceptée par migrateFiche pour rester compatible avec
+ *  les anciennes sauvegardes localStorage qui portaient encore dateDebut
+ *  et dateFin (deux selecteurs de date) au lieu d'un champ libre. */
+interface FicheAtelierLegacy extends Partial<FicheAtelier> {
+  dateDebut?: string | null
+  dateFin?:   string | null
 }
 
 /** Une session qui vient de l'ancien format n'a aucun de ces champs.
  *  On comble les manques pour que la page ne crashe pas. */
-export function migrateFiche<T extends Partial<FicheAtelier>>(s: T): T & FicheAtelier {
+export function migrateFiche<T extends FicheAtelierLegacy>(s: T): T & FicheAtelier {
+  // Migration de la période : si on a deux dates au lieu d'une string,
+  // on construit une chaîne lisible "du X au Y" via formatPeriode.
+  let periode = s.periode
+  if (periode === undefined) {
+    periode = s.dateDebut && s.dateFin ? formatPeriode(s.dateDebut, s.dateFin) : ""
+  }
   return {
     ...s,
     competencesCiblees:     s.competencesCiblees     ?? [],
@@ -106,8 +118,7 @@ export function migrateFiche<T extends Partial<FicheAtelier>>(s: T): T & FicheAt
     besoins:                s.besoins                ?? [],
     etapes:                 s.etapes                 ?? [],
     personnesImpliqueesIds: s.personnesImpliqueesIds ?? [],
-    dateDebut:              s.dateDebut              ?? null,
-    dateFin:                s.dateFin                ?? null,
+    periode,
   }
 }
 
@@ -122,39 +133,23 @@ export function encadrantsRequis(
 }
 
 // ──────────────────────────────────────────────
-// Période d'atelier (helpers d'affichage)
+// Période d'atelier (helper de migration)
 // ──────────────────────────────────────────────
+// Depuis la refonte du formulaire, la période est un champ texte libre
+// directement édité par l'utilisateur. Ce helper reste exposé pour la
+// migration des anciennes sauvegardes qui portaient deux dates (dateDebut
+// et dateFin) — on les concatène en une chaîne lisible.
 
-/** Vrai si la période est valide (les deux dates sont remplies et début ≤ fin). */
-export function periodeValide(dateDebut: string | null, dateFin: string | null): boolean {
-  if (!dateDebut || !dateFin) return false
-  const d = new Date(dateDebut).getTime()
-  const f = new Date(dateFin).getTime()
-  if (isNaN(d) || isNaN(f)) return false
-  return d <= f
-}
-
-/** Formate une période en français : "du 6 au 21 avril 2026".
- *  Renvoie une chaîne vide si la période n'est pas valide. */
+/** Formate "2026-04-13" + "2026-04-24" → "du 13 au 24 avril 2026".
+ *  Renvoie une chaîne vide si une des dates est manquante ou invalide. */
 export function formatPeriode(dateDebut: string | null, dateFin: string | null): string {
-  if (!periodeValide(dateDebut, dateFin)) return ""
-  const d = new Date(dateDebut!)
-  const f = new Date(dateFin!)
+  if (!dateDebut || !dateFin) return ""
+  const d = new Date(dateDebut)
+  const f = new Date(dateFin)
+  if (isNaN(d.getTime()) || isNaN(f.getTime()) || d > f) return ""
   const mois = (date: Date) => date.toLocaleDateString("fr-FR", { month: "long" })
-  // Même mois et même année → "du 6 au 21 avril 2026"
   if (d.getMonth() === f.getMonth() && d.getFullYear() === f.getFullYear()) {
     return `du ${d.getDate()} au ${f.getDate()} ${mois(f)} ${f.getFullYear()}`
   }
-  // Sinon → "du 6 avril au 5 mai 2026"
   return `du ${d.getDate()} ${mois(d)} au ${f.getDate()} ${mois(f)} ${f.getFullYear()}`
-}
-
-/** Durée d'une période : nombre de jours (1+) ou nombre de semaines arrondies. */
-export function dureePeriode(dateDebut: string | null, dateFin: string | null): string {
-  if (!periodeValide(dateDebut, dateFin)) return ""
-  const ms = new Date(dateFin!).getTime() - new Date(dateDebut!).getTime()
-  const jours = Math.round(ms / 86400000) + 1
-  if (jours < 7) return `${jours} jour${jours > 1 ? "s" : ""}`
-  const semaines = Math.round(jours / 7)
-  return `${semaines} sem.${jours !== semaines * 7 ? ` (${jours} j)` : ""}`
 }
