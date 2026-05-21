@@ -70,6 +70,7 @@ interface Groupe {
   type: TypeGroupe
   description: string
   beneficiaireIds: number[]
+  atelierId: number | null
 }
 
 // ──────────────────────────────────────────────
@@ -252,6 +253,7 @@ export default function BrouillonGroupesTab(props: {
       type: brouillon.parametres.mode === "hétérogène" ? "mixte" : "niveau",
       description: `Auto-généré depuis "${atelier.titre}" — ${g.beneficiaireIds.length} bénéficiaires`,
       beneficiaireIds: [...g.beneficiaireIds],
+      atelierId: atelier.id,
     }))
     onGroupesValides(nouveaux)
 

@@ -107,10 +107,12 @@ export const ateliers = {
       niveau: "intermédiaire", notes: "Bonne progression. Intéressée par le back-end.", statut: "actif" },
   ],
   // Groupes (composition par âge, niveau ou mixte)
+  // atelierId = null pour les groupes créés à la main (non rattachés à un atelier).
+  // Pour la démo, on rattache les groupes 1 et 2 à l'atelier théâtre (id 1).
   groupes: [
-    { id: 1, nom: "Groupe A – Débutants", type: "niveau", description: "Bénéficiaires sans expérience (note ≤ 10)", beneficiaireIds: [1, 3, 4] },
-    { id: 2, nom: "Groupe B – Intermédiaires", type: "niveau", description: "HTML/CSS connus, bonne logique (note 11-16)", beneficiaireIds: [2, 6] },
-    { id: 3, nom: "Groupe C – Avancés", type: "niveau", description: "Niveau confirmé (note ≥ 17)", beneficiaireIds: [5] },
+    { id: 1, nom: "Groupe A – Débutants",     type: "niveau", description: "Bénéficiaires sans expérience (note ≤ 10)",   beneficiaireIds: [1, 3, 4], atelierId: 1 },
+    { id: 2, nom: "Groupe B – Intermédiaires", type: "niveau", description: "HTML/CSS connus, bonne logique (note 11-16)", beneficiaireIds: [2, 6],    atelierId: 1 },
+    { id: 3, nom: "Groupe C – Avancés",        type: "niveau", description: "Niveau confirmé (note ≥ 17)",                 beneficiaireIds: [5],       atelierId: null },
   ],
 }
 

@@ -24,6 +24,7 @@ import Link from "next/link"
 import {
   Plus, Pencil, CalendarDays, Users, UserCheck, ClipboardCheck,
   X, Columns3, Check, AlertTriangle, Sparkles, Shuffle,
+  ChevronDown, ChevronRight,
 } from "lucide-react"
 import SlideOver, {
   Field, Input, Select, Textarea, FormRow, SaveButton, DeleteButton,
@@ -76,6 +77,9 @@ interface Groupe {
   type: TypeGroupe
   description: string
   beneficiaireIds: number[]
+  /** Atelier source si le groupe vient d'une composition validée.
+   *  null pour les groupes créés à la main depuis le sous-onglet Groupes. */
+  atelierId: number | null
 }
 
 // ──────────────────────────────────────────────
@@ -178,22 +182,30 @@ const emptySession = (): Omit<Session, "id"> => ({
 
 const emptyGroupe = (): Omit<Groupe, "id"> => ({
   nom: "", type: "niveau", description: "", beneficiaireIds: [],
+  atelierId: null,
 })
 
 // ══════════════════════════════════════════════
 // ONGLET ATELIERS
 // ══════════════════════════════════════════════
 function AteliersTab({
-  sessions, beneficiaires, benevoles, onEdit,
+  sessions, beneficiaires, benevoles, groupes, onEdit,
 }: {
   sessions: Session[]
   beneficiaires: Beneficiaire[]
   benevoles: typeof benevolesMock.liste
+  groupes: Groupe[]
   onEdit: (s: Session) => void
 }) {
   const sorted   = [...sessions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
   const upcoming = sorted.filter(s => s.statut !== "terminé" && s.statut !== "annulé")
   const past     = sorted.filter(s => s.statut === "terminé" || s.statut === "annulé")
+  // État "groupes dépliés" géré au niveau du parent pour ne pas se perdre
+  // quand SessionCard (composant interne) est recréé à chaque render.
+  const [groupesOuverts, setGroupesOuverts] = useState<Record<number, boolean>>({})
+  function toggleGroupes(id: number) {
+    setGroupesOuverts(m => ({ ...m, [id]: !m[id] }))
+  }
 
   function SessionCard({ s }: { s: Session }) {
     const benefs = s.beneficiaireIds
@@ -202,6 +214,9 @@ function AteliersTab({
     const bvls = s.benevoleIds
       .map(id => benevoles.find(bv => bv.id === id))
       .filter((bv): bv is (typeof benevoles)[0] => Boolean(bv))
+    // Groupes rattachés à cet atelier (rattachement explicite via atelierId).
+    const groupesAtelier = groupes.filter(g => g.atelierId === s.id)
+    const ouvert = !!groupesOuverts[s.id]
 
     return (
       <li className="px-5 py-4 flex items-start gap-4 hover:bg-slate-50 group">
@@ -265,6 +280,57 @@ function AteliersTab({
                   ))}
                 </div>
               </div>
+            )}
+          </div>
+
+          {/* ── Bloc "Voir les groupes" déroulable ── */}
+          <div className="mt-3 pt-3 border-t border-border/60">
+            {groupesAtelier.length === 0 ? (
+              <p className="text-[11px] text-muted italic">Aucun groupe rattaché.</p>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => toggleGroupes(s.id)}
+                  className="flex items-center gap-1.5 text-xs font-medium text-ateliers-dark hover:underline"
+                >
+                  {ouvert ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+                  {ouvert ? "Masquer" : "Voir"} les groupes ({groupesAtelier.length})
+                </button>
+                {ouvert && (
+                  <ul className="mt-2 flex flex-col gap-2">
+                    {groupesAtelier.map(g => {
+                      const membres = g.beneficiaireIds
+                        .map(id => beneficiaires.find(b => b.id === id))
+                        .filter((b): b is Beneficiaire => Boolean(b))
+                      return (
+                        <li key={g.id} className="rounded-lg bg-slate-50 border border-border px-3 py-2">
+                          <div className="flex items-center justify-between gap-2 flex-wrap mb-1.5">
+                            <p className="text-xs font-semibold text-foreground">{g.nom}</p>
+                            <span className="text-[10px] bg-ateliers-light text-ateliers-dark px-1.5 py-0.5 rounded-full">
+                              {membres.length} bénéficiaire{membres.length > 1 ? "s" : ""}
+                            </span>
+                          </div>
+                          {membres.length === 0 ? (
+                            <p className="text-[10px] text-muted italic">Aucun bénéficiaire.</p>
+                          ) : (
+                            <div className="flex flex-wrap gap-1">
+                              {membres.map(b => (
+                                <span
+                                  key={b.id}
+                                  className="text-[10px] bg-surface border border-border text-foreground px-2 py-0.5 rounded-full"
+                                >
+                                  {b.prenom} {b.nom}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </li>
+                      )
+                    })}
+                  </ul>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -508,7 +574,11 @@ export default function AteliersPage() {
     // Migration auto pour les bénéficiaires (note unique → 4 notes du Lot 1).
     const benefsRaw = load<Beneficiaire[]>(S_BENEF, ateliersMock.beneficiaires as Beneficiaire[])
     setBeneficiaires(benefsRaw.map(b => migrateBenef(b) as Beneficiaire))
-    setGroupes(load(S_GROUPES, ateliersMock.groupes as Groupe[]))
+    // Migration auto des groupes : les anciens enregistrements n'ont pas de
+    // champ atelierId, on le force à null pour qu'ils restent affichés dans
+    // le sous-onglet Groupes mais pas attachés à un atelier.
+    const groupesRaw = load<Groupe[]>(S_GROUPES, ateliersMock.groupes as Groupe[])
+    setGroupes(groupesRaw.map(g => ({ ...g, atelierId: g.atelierId ?? null })))
     refreshMembres()
   }, [])
 
@@ -705,6 +775,7 @@ export default function AteliersPage() {
           sessions={sessions}
           beneficiaires={beneficiaires}
           benevoles={benevoles}
+          groupes={groupes}
           onEdit={openEditSession}
         />
       )}
