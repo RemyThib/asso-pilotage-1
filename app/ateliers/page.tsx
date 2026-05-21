@@ -731,6 +731,13 @@ export default function AteliersPage() {
           sessions={sessions}
           beneficiaires={beneficiaires}
           onGroupesValides={(nouveaux) => persistGroupes([...groupes, ...nouveaux])}
+          onAtelierBenefsUpdated={(atelierId, benefIds) => {
+            // Met à jour la session source : sa liste de bénéficiaires reflète
+            // désormais la composition validée. Affiché dans le sous-onglet Ateliers.
+            persistSessions(sessions.map(s =>
+              s.id === atelierId ? { ...s, beneficiaireIds: benefIds } : s,
+            ))
+          }}
           onValidated={() => {
             // Bascule sur l'onglet Groupes pour montrer immédiatement le résultat.
             setTab("groupes")

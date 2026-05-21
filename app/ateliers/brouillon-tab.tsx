@@ -89,12 +89,6 @@ function computeAge(dn: string): number | null {
   return isNaN(an) ? null : new Date().getFullYear() - an
 }
 
-function cohesionColor(score: number): string {
-  if (score >= 80) return "text-green-700 bg-green-100"
-  if (score >= 60) return "text-orange-700 bg-orange-100"
-  return "text-red-700 bg-red-100"
-}
-
 // ──────────────────────────────────────────────
 // Composant principal
 // ──────────────────────────────────────────────
@@ -104,11 +98,14 @@ export default function BrouillonGroupesTab(props: {
   /** Appelé quand la collaboratrice valide un brouillon : le parent ajoute les
    *  nouveaux groupes à son state, ce qui les rend visibles dans l'onglet Groupes. */
   onGroupesValides: (newGroupes: Groupe[]) => void
+  /** Met à jour la session source pour que l'onglet Ateliers reflète la
+   *  composition validée (beneficiaireIds = union des groupes du brouillon). */
+  onAtelierBenefsUpdated: (atelierId: number, beneficiaireIds: number[]) => void
   /** Optionnel : bascule automatiquement sur un autre onglet après validation
    *  (par défaut on bascule sur "Groupes" pour montrer le résultat). */
   onValidated?: (nbGroupes: number) => void
 }) {
-  const { sessions, beneficiaires, onGroupesValides, onValidated } = props
+  const { sessions, beneficiaires, onGroupesValides, onAtelierBenefsUpdated, onValidated } = props
 
   /** Brouillons indexés par atelierId. */
   const [brouillons, setBrouillons] = useState<Record<number, Brouillon | null>>({})
@@ -242,10 +239,18 @@ export default function BrouillonGroupesTab(props: {
       id: baseId + i,
       nom: g.nom,
       type: brouillon.parametres.mode === "hétérogène" ? "mixte" : "niveau",
-      description: `Auto-généré depuis "${atelier.titre}" — ${g.beneficiaireIds.length} bénéficiaires, cohésion ${g.scoreCohesion}%`,
+      description: `Auto-généré depuis "${atelier.titre}" — ${g.beneficiaireIds.length} bénéficiaires`,
       beneficiaireIds: [...g.beneficiaireIds],
     }))
     onGroupesValides(nouveaux)
+
+    // Synchronise la session source : ses beneficiaireIds deviennent
+    // l'union de tous les bénéficiaires placés dans les groupes validés.
+    // C'est cette union qui sera affichée dans la carte de l'atelier
+    // (sous-onglet Ateliers) et utilisée par les pages aval (émargement…).
+    const benefsUnion = Array.from(new Set(nouveaux.flatMap(g => g.beneficiaireIds)))
+    onAtelierBenefsUpdated(atelier.id, benefsUnion)
+
     supprimerBrouillon(atelier.id)
     // Bascule sur l'onglet Groupes pour montrer le résultat immédiatement.
     onValidated?.(nouveaux.length)
@@ -627,9 +632,6 @@ function GroupeCard(props: {
               <UserCheck size={9} /> {groupe.encadrantsRequis} encadrant·e{groupe.encadrantsRequis > 1 ? "s" : ""}
             </span>
           )}
-          <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${cohesionColor(groupe.scoreCohesion)}`}>
-            cohésion {groupe.scoreCohesion}%
-          </span>
         </div>
       </header>
 

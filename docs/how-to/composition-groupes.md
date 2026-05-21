@@ -118,7 +118,6 @@ Sur cet écran, pour chaque atelier :
 
 - Les **groupes proposés** sont affichés en cartes. Chaque carte indique :
   - le nom (auto-généré : *{atelier} · {tranche} · Groupe N*)
-  - le **score de cohésion** (0-100, % de proximité des notes au sein du groupe)
   - le nombre d'**encadrants requis** si l'atelier impose un ratio
 - Les bénéficiaires **non placés** sont affichés à part dans deux zones :
   - **À évaluer avant attribution** (orange) — pas de notes initiales

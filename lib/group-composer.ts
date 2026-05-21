@@ -17,8 +17,8 @@
 //   4. Selon le mode :
 //      • Homogène (défaut) : on slice le tri en N groupes consécutifs.
 //      • Hétérogène : on distribue les bénéficiaires en round-robin.
-//   5. On calcule pour chaque groupe le nombre d'encadrants requis (si
-//      l'atelier impose un ratio) et un score de cohésion (0-100).
+//   5. On calcule pour chaque groupe le nombre d'encadrants requis si
+//      l'atelier impose un ratio.
 
 import type { Thematique, NotesPositionnement } from "./positionnement"
 import type { FicheAtelier } from "./atelier"
@@ -45,9 +45,6 @@ export interface GroupeBrouillon {
   beneficiaireIds: number[]
   /** Encadrants requis selon le ratio de l'atelier — null si pas de ratio défini. */
   encadrantsRequis: number | null
-  /** Indicateur 0-100 d'homogénéité du groupe sur les thématiques ciblées.
-   *  100 = identiques, 0 = très dispersé. */
-  scoreCohesion: number
 }
 
 /** Poids appliqué à une thématique dans le tri du groupage.
@@ -123,24 +120,6 @@ function compareLex(a: number[], b: number[]): number {
     if (a[i] !== b[i]) return b[i] - a[i]   // descendant
   }
   return 0
-}
-
-/** Score de cohésion d'un groupe : 100 - (moyenne des écarts max-min par dim, ramenée sur 100). */
-function scoreCohesion(
-  membres: BeneficiairePourGroupage[],
-  dims: Thematique[],
-): number {
-  if (membres.length <= 1 || dims.length === 0) return 100
-  const ecarts = dims.map(d => {
-    const notes = membres
-      .map(m => m.positionnementInitial[d])
-      .filter((n): n is number => n !== null)
-    if (notes.length < 2) return 0
-    return Math.max(...notes) - Math.min(...notes)
-  })
-  const ecartMoyen = ecarts.reduce((a, b) => a + b, 0) / dims.length
-  // Note sur 20, donc max d'écart = 20. On ramène sur 100.
-  return Math.round(Math.max(0, 100 - (ecartMoyen / 20) * 100))
 }
 
 /** Découpe une liste en N sous-listes consécutives de taille équilibrée. */
@@ -326,7 +305,6 @@ export function composerGroupes(
         tranche: tranche === "hors" ? null : tranche,
         beneficiaireIds: membres.map(m => m.id),
         encadrantsRequis: encadrantsRequis(atelier.ratioEncadrement, membres.length),
-        scoreCohesion: scoreCohesion(membres, dims),
       })
     })
   }
