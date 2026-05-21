@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import React, { useEffect, useRef } from "react"
 import { X } from "lucide-react"
 
 interface SlideOverProps {
@@ -13,6 +13,8 @@ interface SlideOverProps {
 }
 
 export default function SlideOver({ open, onClose, title, subtitle, children, width = "md" }: SlideOverProps) {
+  const panelRef = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
     if (open) document.body.style.overflow = "hidden"
     else document.body.style.overflow = ""
@@ -20,10 +22,19 @@ export default function SlideOver({ open, onClose, title, subtitle, children, wi
   }, [open])
 
   useEffect(() => {
-    function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose() }
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
-  }, [onClose])
+    if (!open) return
+    const firstFocusable = panelRef.current?.querySelector<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    )
+    firstFocusable?.focus()
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return
+    function handleKey(e: KeyboardEvent) { if (e.key === "Escape") onClose() }
+    document.addEventListener("keydown", handleKey)
+    return () => document.removeEventListener("keydown", handleKey)
+  }, [open, onClose])
 
   const widthClass = { sm: "max-w-sm", md: "max-w-md", lg: "max-w-lg" }[width]
 
@@ -31,19 +42,24 @@ export default function SlideOver({ open, onClose, title, subtitle, children, wi
     <>
       {/* Backdrop */}
       <div
+        aria-hidden="true"
         className={`fixed inset-0 bg-black/30 z-40 transition-opacity duration-200 ${open ? "opacity-100" : "opacity-0 pointer-events-none"}`}
         onClick={onClose}
       />
       {/* Panel */}
       <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="slideover-title"
         className={`fixed inset-y-0 right-0 ${widthClass} w-full bg-surface shadow-2xl z-50 flex flex-col transition-transform duration-300 ease-in-out ${open ? "translate-x-0" : "translate-x-full"}`}
       >
         <div className="flex items-start justify-between px-6 py-5 border-b border-border">
           <div>
-            <h2 className="font-semibold text-foreground text-base">{title}</h2>
+            <h2 id="slideover-title" className="font-semibold text-foreground text-base">{title}</h2>
             {subtitle && <p className="text-sm text-muted mt-0.5">{subtitle}</p>}
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100 text-muted transition-colors mt-0.5">
+          <button onClick={onClose} aria-label="Fermer" className="p-1.5 rounded-lg hover:bg-slate-100 text-muted transition-colors mt-0.5">
             <X size={18} />
           </button>
         </div>
@@ -57,12 +73,21 @@ export default function SlideOver({ open, onClose, title, subtitle, children, wi
 // Composants de formulaire réutilisables
 // ─────────────────────────────────────────────────────────────────────────────
 export function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
+  const fieldId = label.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "")
+
+  const childWithId = React.Children.map(children, child => {
+    if (React.isValidElement(child)) {
+      return React.cloneElement(child as React.ReactElement<{ id?: string }>, { id: fieldId })
+    }
+    return child
+  })
+
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="text-xs font-semibold text-muted uppercase tracking-wider">
+      <label htmlFor={fieldId} className="text-xs font-semibold text-muted uppercase tracking-wider">
         {label}{required && <span className="text-alert ml-0.5">*</span>}
       </label>
-      {children}
+      {childWithId}
     </div>
   )
 }

@@ -146,6 +146,21 @@ git fetch origin
 
 ---
 
+## Checklist accessibilité (obligatoire avant merge)
+
+Chaque PR touchant un composant ou une page doit valider ces 6 points :
+
+- [ ] **Navigation clavier** — la fonctionnalité est utilisable au clavier (Tab / Shift+Tab / Enter / Escape)
+- [ ] **Contrastes** — vérifiés avec [webaim.org/resources/contrastchecker/](https://webaim.org/resources/contrastchecker/) (ratio ≥ 4.5:1 texte normal, ≥ 3:1 texte grand)
+- [ ] **Labels formulaires** — chaque `<input>` / `<select>` / `<textarea>` est lié à son `<label>` via `htmlFor` / `id`
+- [ ] **Boutons icône** — tout bouton sans texte visible a un `aria-label` explicite
+- [ ] **Focus visible** — pas de `outline: none` sans alternative visible (le ring teal AREA est déjà géré globalement)
+- [ ] **axe DevTools** — 0 erreur critique signalée par l'extension axe DevTools (Chrome/Firefox)
+
+> Référence complète : [ADR 005 — Accessibilité](/docs/adr/005-accessibilite) · Outil : [axe DevTools](https://www.deque.com/axe/devtools/)
+
+---
+
 ## En cas de conflit
 
 Un conflit arrive quand deux personnes ont modifié le même fichier.

@@ -15,9 +15,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="fr" className={`${geistSans.variable} h-full`}>
       <body className="h-full flex bg-background">
+        <a href="#main-content" className="skip-nav">Aller au contenu principal</a>
         <AuthProvider>
           <AuthGate>
-            <main className="flex-1 overflow-y-auto">{children}</main>
+            <main id="main-content" className="flex-1 overflow-y-auto">{children}</main>
           </AuthGate>
         </AuthProvider>
       </body>

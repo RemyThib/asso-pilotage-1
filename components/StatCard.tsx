@@ -1,3 +1,5 @@
+"use client"
+
 import { type LucideIcon } from "lucide-react"
 import Link from "next/link"
 
@@ -53,6 +55,7 @@ export default function StatCard({
 
       <Link
         href={href}
+        aria-label={`${cta} — ${title}`}
         className={`mt-auto text-center text-sm font-medium py-2 rounded-lg ${accentClass} ${iconClass} hover:opacity-80 transition-opacity`}
       >
         {cta} →

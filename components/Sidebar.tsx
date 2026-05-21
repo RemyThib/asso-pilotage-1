@@ -44,7 +44,7 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="w-60 min-h-screen bg-surface border-r border-border flex flex-col shrink-0">
+    <aside className="w-60 min-h-screen bg-surface border-r border-border flex flex-col shrink-0" aria-label="Menu principal">
       <div className="p-5 border-b border-border flex items-center gap-2.5">
         <span className="bg-brand text-white rounded-lg p-1.5">
           <Heart size={16} />
@@ -52,7 +52,7 @@ export default function Sidebar() {
         <span className="font-semibold text-foreground text-sm tracking-wide">AREA Nantes</span>
       </div>
 
-      <nav className="flex-1 p-3 flex flex-col gap-1 overflow-y-auto">
+      <nav className="flex-1 p-3 flex flex-col gap-1 overflow-y-auto" role="navigation">
         <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-3 py-1.5 mt-1">Opérationnel</p>
         {navItems.map(({ href, label, icon: Icon, accent, dot }) => {
           const active = pathname === href || (href !== "/dashboard" && pathname.startsWith(href))
@@ -60,6 +60,7 @@ export default function Sidebar() {
             <Link
               key={href}
               href={href}
+              aria-current={active ? "page" : undefined}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 active
                   ? `${accent} font-semibold`
@@ -79,6 +80,7 @@ export default function Sidebar() {
             <Link
               key={href}
               href={href}
+              aria-current={active ? "page" : undefined}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 active
                   ? `${accent} font-semibold`
@@ -106,7 +108,7 @@ export default function Sidebar() {
                 <p className="text-[10px] text-muted truncate">{ROLE_LABELS[user.role]}</p>
               </div>
             </Link>
-            <button onClick={handleLogout} title="Se déconnecter" className="p-1 rounded hover:bg-slate-200 text-muted transition-colors">
+            <button onClick={handleLogout} title="Se déconnecter" aria-label="Se déconnecter" className="p-1 rounded hover:bg-slate-200 text-muted transition-colors">
               <LogOut size={13} />
             </button>
           </div>

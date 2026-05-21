@@ -51,6 +51,7 @@ const docSections: DocSection[] = [
       { href: "/docs/adr/002-tailwind",      label: "002 – Tailwind v4" },
       { href: "/docs/adr/003-auth",          label: "003 – Auth" },
       { href: "/docs/adr/004-google-sheets", label: "004 – Google Sheets" },
+      { href: "/docs/adr/005-accessibilite", label: "005 – Accessibilité" },
     ],
   },
   {

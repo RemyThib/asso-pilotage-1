@@ -1,3 +1,5 @@
+"use client"
+
 import StatCard from "@/components/StatCard"
 import { Euro, BookOpen, Megaphone, UserCog } from "lucide-react"
 import { finances, ateliers, communication, membres } from "@/lib/mock-data"
@@ -25,7 +27,7 @@ export default function DashboardPage() {
         <p className="text-sm text-muted capitalize">{todayFr()}</p>
         <h1 className="text-2xl font-bold text-foreground mt-1">Vue d'ensemble</h1>
         {totalAlertes > 0 && (
-          <div className="mt-4 bg-red-50 border border-alert/20 text-alert rounded-lg px-4 py-3 text-sm font-medium">
+          <div role="alert" aria-live="assertive" className="mt-4 bg-red-50 border border-alert/20 text-alert rounded-lg px-4 py-3 text-sm font-medium">
             {totalAlertes} point{totalAlertes > 1 ? "s" : ""} à traiter aujourd'hui
           </div>
         )}
