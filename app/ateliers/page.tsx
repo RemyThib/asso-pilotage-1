@@ -24,7 +24,7 @@ import Link from "next/link"
 import {
   Plus, Pencil, CalendarDays, Users, UserCheck, ClipboardCheck,
   X, Columns3, Check, AlertTriangle, Sparkles, Shuffle,
-  ChevronDown, ChevronRight, Search,
+  ChevronDown, ChevronUp, ChevronRight, Search,
 } from "lucide-react"
 import SlideOver, {
   Field, Input, Select, Textarea, FormRow, SaveButton, DeleteButton,
@@ -506,133 +506,246 @@ function AteliersTab({
 // ONGLET GROUPES
 // ══════════════════════════════════════════════
 function GroupesTab({
-  groupes, beneficiaires, onEdit, onUpdateMembers,
+  groupes, beneficiaires, sessions, onEdit,
 }: {
   groupes: Groupe[]
   beneficiaires: Beneficiaire[]
+  sessions: Session[]
   onEdit: (g: Groupe) => void
-  onUpdateMembers: (groupeId: number, beneficiaireIds: number[]) => void
 }) {
-  const [expandedId, setExpandedId] = useState<number | null>(null)
+  // ── Filtres ──
+  const [search, setSearch]               = useState("")
+  const [filterAtelier, setFilterAtelier] = useState<string>("tous")
 
+  // ── Tri ──
+  type SortKey = "atelier" | "groupe" | "effectif"
+  const [sortKey, setSortKey]     = useState<SortKey>("atelier")
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) setSortOrder(o => o === "asc" ? "desc" : "asc")
+    else { setSortKey(key); setSortOrder("asc") }
+  }
+
+  // ── Helpers ──
   function getMembers(g: Groupe): Beneficiaire[] {
     return g.beneficiaireIds
       .map(id => beneficiaires.find(b => b.id === id))
       .filter((b): b is Beneficiaire => Boolean(b))
   }
-
-  function getScoreRange(g: Groupe): string | null {
-    if (g.type !== "niveau") return null
-    // Moyenne du test initial pour chaque bénéficiaire — pas une note unique.
-    const scores = getMembers(g)
-      .map(b => notesMoyenne(b.positionnementInitial))
-      .filter((n): n is number => n !== null)
-    if (scores.length === 0) return null
-    return `Moy. ${Math.min(...scores).toFixed(0)}–${Math.max(...scores).toFixed(0)}`
+  function getAtelierTitre(atelierId: number | null): string {
+    if (atelierId === null) return ""
+    return sessions.find(s => s.id === atelierId)?.titre ?? "Atelier supprimé"
   }
 
-  function getAgeRange(g: Groupe): string | null {
-    if (g.type !== "âge") return null
-    const ages = getMembers(g)
-      .filter(b => b.dateNaissance)
-      .map(b => computeAge(b.dateNaissance))
-    if (ages.length === 0) return null
-    return `${Math.min(...ages)}–${Math.max(...ages)} ans`
-  }
+  // Ateliers présents dans au moins un groupe (pour peupler le select).
+  const ateliersAvecGroupes = Array.from(new Set(groupes.map(g => g.atelierId)))
+    .filter((id): id is number => id !== null)
+    .map(id => sessions.find(s => s.id === id))
+    .filter((s): s is Session => Boolean(s))
+    .sort((a, b) => a.titre.localeCompare(b.titre))
+  const aGroupesManuels = groupes.some(g => g.atelierId === null)
 
-  function removeMember(g: Groupe, beneficiaireId: number) {
-    onUpdateMembers(g.id, g.beneficiaireIds.filter(id => id !== beneficiaireId))
+  // ── Filtrage ──
+  const q = search.trim().toLowerCase()
+  const filtered = groupes.filter(g => {
+    if (filterAtelier === "sans") {
+      if (g.atelierId !== null) return false
+    } else if (filterAtelier !== "tous") {
+      if (String(g.atelierId) !== filterAtelier) return false
+    }
+    if (!q) return true
+    if (g.nom.toLowerCase().includes(q)) return true
+    if (getAtelierTitre(g.atelierId).toLowerCase().includes(q)) return true
+    return getMembers(g).some(b =>
+      `${b.prenom} ${b.nom}`.toLowerCase().includes(q),
+    )
+  })
+
+  // ── Tri ──
+  const sorted = [...filtered].sort((a, b) => {
+    const factor = sortOrder === "asc" ? 1 : -1
+    if (sortKey === "atelier") {
+      const ta = getAtelierTitre(a.atelierId) || "zzz" // manuels en fin
+      const tb = getAtelierTitre(b.atelierId) || "zzz"
+      if (ta !== tb) return ta.localeCompare(tb) * factor
+      return a.nom.localeCompare(b.nom) * factor
+    }
+    if (sortKey === "groupe")   return a.nom.localeCompare(b.nom) * factor
+    if (sortKey === "effectif") return (a.beneficiaireIds.length - b.beneficiaireIds.length) * factor
+    return 0
+  })
+
+  // ── Stats ──
+  const benefsPlaces = new Set(groupes.flatMap(g => g.beneficiaireIds)).size
+  const totalActifs  = beneficiaires.filter(b => b.statut === "actif").length
+
+  const filtreActif = q !== "" || filterAtelier !== "tous"
+  function resetFiltres() { setSearch(""); setFilterAtelier("tous") }
+
+  // Sous-composant : en-tête de colonne triable
+  function SortHeader({ keyName, label }: { keyName: SortKey; label: string }) {
+    const active = sortKey === keyName
+    return (
+      <button
+        type="button"
+        onClick={() => toggleSort(keyName)}
+        className={`flex items-center gap-1 text-xs font-semibold uppercase tracking-wider transition-colors ${
+          active ? "text-foreground" : "text-muted hover:text-foreground"
+        }`}
+      >
+        {label}
+        {active && (sortOrder === "asc" ? <ChevronUp size={11} /> : <ChevronDown size={11} />)}
+      </button>
+    )
   }
 
   return (
     <div className="space-y-4">
-      {groupes.length === 0 && (
-        <p className="text-center text-sm text-muted py-12 italic">Aucun groupe constitué</p>
-      )}
-      <div className="grid grid-cols-1 gap-4">
-        {groupes.map(g => {
-          const members = getMembers(g)
-          const isExpanded = expandedId === g.id
-          const scoreRange = getScoreRange(g)
-          const ageRange   = getAgeRange(g)
-
-          return (
-            <div
-              key={g.id}
-              className="bg-surface rounded-xl border border-border overflow-hidden group"
-            >
-              {/* Card header */}
-              <div
-                className="px-5 py-4 flex items-start gap-4 cursor-pointer hover:bg-slate-50 transition-colors"
-                onClick={() => setExpandedId(isExpanded ? null : g.id)}
-              >
-                {/* Avatars */}
-                <div className="flex -space-x-2 shrink-0 mt-0.5">
-                  {members.slice(0, 4).map(b => (
-                    <div key={b.id} className="w-7 h-7 rounded-full bg-ateliers-light border-2 border-white flex items-center justify-center">
-                      <span className="text-[9px] font-bold text-ateliers-dark">{initials(b.prenom, b.nom)}</span>
-                    </div>
-                  ))}
-                  {members.length > 4 && (
-                    <div className="w-7 h-7 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center">
-                      <span className="text-[9px] font-bold text-slate-500">+{members.length - 4}</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-semibold text-foreground text-sm">{g.nom}</p>
-                    <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${typeGroupeStyle[g.type]}`}>{g.type}</span>
-                    {scoreRange && <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{scoreRange}</span>}
-                    {ageRange   && <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{ageRange}</span>}
-                  </div>
-                  {g.description && <p className="text-xs text-muted mt-0.5">{g.description}</p>}
-                  <p className="text-xs text-muted mt-1">
-                    {members.length} membre{members.length > 1 ? "s" : ""}
-                  </p>
-                </div>
-
-                {/* Actions */}
-                <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
-                  <button onClick={() => onEdit(g)} className="p-1.5 rounded-lg hover:bg-slate-100 text-muted">
-                    <Pencil size={13} />
-                  </button>
-                </div>
-              </div>
-
-              {/* Expanded member list */}
-              {isExpanded && (
-                <div className="border-t border-border px-5 py-4">
-                  <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">Membres</p>
-                  {members.length === 0 ? (
-                    <p className="text-xs text-muted italic">Aucun membre dans ce groupe</p>
-                  ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {members.map(b => (
-                        <span
-                          key={b.id}
-                          className="flex items-center gap-1.5 text-xs bg-ateliers-light text-ateliers-dark px-2.5 py-1 rounded-full"
-                        >
-                          {b.prenom} {b.nom}
-                          <button
-                            onClick={() => removeMember(g, b.id)}
-                            className="hover:opacity-60 transition-opacity"
-                            title="Retirer du groupe"
-                          >
-                            <X size={10} />
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )
-        })}
+      {/* ── Stats bar ── */}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="bg-ateliers-light rounded-xl border border-ateliers/20 p-4">
+          <p className="text-3xl font-bold text-ateliers-dark">{groupes.length}</p>
+          <p className="text-sm text-ateliers-dark/70 mt-1">Groupe{groupes.length > 1 ? "s" : ""} au total</p>
+        </div>
+        <div className="bg-surface rounded-xl border border-border p-4">
+          <p className="text-3xl font-bold text-foreground">{benefsPlaces}</p>
+          <p className="text-sm text-muted mt-1">
+            Bénéficiaires placés <span className="text-[11px]">/ {totalActifs} actifs</span>
+          </p>
+        </div>
+        <div className="bg-surface rounded-xl border border-border p-4">
+          <p className="text-3xl font-bold text-foreground">{ateliersAvecGroupes.length}</p>
+          <p className="text-sm text-muted mt-1">Atelier{ateliersAvecGroupes.length > 1 ? "s" : ""} avec composition</p>
+        </div>
       </div>
+
+      {/* ── Filtres ── */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="relative flex-1 min-w-48">
+          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+          <input
+            type="text"
+            placeholder="Rechercher un groupe, atelier ou bénéficiaire…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-border bg-surface focus:outline-none focus:ring-2 focus:ring-ateliers/30"
+          />
+          {search && (
+            <button type="button" onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-foreground" aria-label="Effacer">
+              <X size={13} />
+            </button>
+          )}
+        </div>
+        <select
+          value={filterAtelier}
+          onChange={e => setFilterAtelier(e.target.value)}
+          className="text-sm rounded-xl border border-border bg-surface px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ateliers/30"
+        >
+          <option value="tous">Tous les ateliers</option>
+          {ateliersAvecGroupes.map(s => (
+            <option key={s.id} value={String(s.id)}>{s.titre}</option>
+          ))}
+          {aGroupesManuels && <option value="sans">— Groupes manuels —</option>}
+        </select>
+        {filtreActif && (
+          <button type="button" onClick={resetFiltres} className="text-xs text-muted hover:text-foreground hover:underline">
+            Réinitialiser
+          </button>
+        )}
+      </div>
+
+      {/* ── Table ── */}
+      {groupes.length === 0 ? (
+        <p className="text-center text-sm text-muted py-12 italic">Aucun groupe constitué.</p>
+      ) : sorted.length === 0 ? (
+        <p className="text-center text-sm text-muted py-12 italic">
+          Aucun groupe ne correspond aux filtres actuels.
+        </p>
+      ) : (
+        <div className="bg-surface rounded-xl border border-border overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50">
+              <tr className="border-b border-border">
+                <th className="px-4 py-2.5 text-left"><SortHeader keyName="atelier"  label="Atelier"  /></th>
+                <th className="px-4 py-2.5 text-left"><SortHeader keyName="groupe"   label="Groupe"   /></th>
+                <th className="px-4 py-2.5 text-left"><SortHeader keyName="effectif" label="Effectif" /></th>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted uppercase tracking-wider">
+                  Aperçu des membres
+                </th>
+                <th className="w-10 px-2" aria-label="Actions" />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {sorted.map(g => {
+                const members = getMembers(g)
+                const titre   = getAtelierTitre(g.atelierId)
+                return (
+                  <tr
+                    key={g.id}
+                    onClick={() => onEdit(g)}
+                    className="hover:bg-slate-50 cursor-pointer group/row"
+                  >
+                    <td className="px-4 py-3 text-xs align-top">
+                      {g.atelierId === null ? (
+                        <span className="text-muted italic">— manuel —</span>
+                      ) : (
+                        <span className="font-medium text-foreground">{titre}</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 align-top">
+                      <p className="text-xs font-semibold text-foreground">{g.nom}</p>
+                      <span className={`text-[10px] mt-0.5 inline-block px-1.5 py-0.5 rounded ${typeGroupeStyle[g.type]}`}>
+                        {g.type}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-xs font-medium text-foreground tabular-nums align-top">
+                      {members.length}
+                    </td>
+                    <td className="px-4 py-3 align-top">
+                      {members.length === 0 ? (
+                        <span className="text-[11px] text-muted italic">Aucun membre</span>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <div className="flex -space-x-1.5">
+                            {members.slice(0, 5).map(b => (
+                              <div
+                                key={b.id}
+                                title={`${b.prenom} ${b.nom}`}
+                                className="w-6 h-6 rounded-full bg-ateliers-light border-2 border-surface flex items-center justify-center shrink-0"
+                              >
+                                <span className="text-[9px] font-bold text-ateliers-dark">{initials(b.prenom, b.nom)}</span>
+                              </div>
+                            ))}
+                            {members.length > 5 && (
+                              <div className="w-6 h-6 rounded-full bg-slate-100 border-2 border-surface flex items-center justify-center shrink-0">
+                                <span className="text-[9px] font-bold text-slate-500">+{members.length - 5}</span>
+                              </div>
+                            )}
+                          </div>
+                          <span className="text-[11px] text-muted truncate max-w-xs">
+                            {members.slice(0, 3).map(b => `${b.prenom} ${b.nom}`).join(", ")}
+                            {members.length > 3 && ` · +${members.length - 3}`}
+                          </span>
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-2 py-3 align-top">
+                      <button
+                        type="button"
+                        onClick={e => { e.stopPropagation(); onEdit(g) }}
+                        className="p-1.5 rounded-lg hover:bg-slate-100 text-muted opacity-0 group-hover/row:opacity-100 transition-opacity"
+                        aria-label="Modifier le groupe"
+                      >
+                        <Pencil size={13} />
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   )
 }
@@ -903,8 +1016,8 @@ export default function AteliersPage() {
         <GroupesTab
           groupes={groupes}
           beneficiaires={beneficiaires}
+          sessions={sessions}
           onEdit={openEditGroupe}
-          onUpdateMembers={updateGroupeMembers}
         />
       )}
       {tab === "brouillon" && (
