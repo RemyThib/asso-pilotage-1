@@ -2,15 +2,14 @@
 
 import { useState, useMemo, useEffect, useRef } from "react"
 import { communication, benevoles as benevolesMock } from "@/lib/mock-data"
-import { Calendar, Columns3, Check, X, RotateCcw, Plus, Pencil, CalendarDays, Shuffle, CheckCircle2, XCircle, Users } from "lucide-react"
+import { Calendar, Columns3, Check, X, RotateCcw, Plus, Pencil, CalendarDays, Shuffle, CheckCircle2, XCircle, Users, ChevronRight } from "lucide-react"
 import SlideOver, { Field, Input, Textarea, Select, FormRow, SaveButton, DeleteButton } from "@/components/SlideOver"
 
 const STORAGE_POSTS        = "asso-communication-posts"
 const STORAGE_EVENTS       = "asso-communication-events"
 const STORAGE_INTEGRATIONS = "asso-communication-integrations"
-// Clés des autres modules (lecture seule)
-const S_SESSIONS    = "asso-ateliers-sessions"
-const S_BENEFICIAIRES = "asso-beneficiaires"
+const S_SESSIONS           = "asso-ateliers-sessions"
+const S_BENEFICIAIRES      = "asso-beneficiaires"
 
 function load<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback
@@ -37,12 +36,11 @@ interface MediaItem {
   preview?: string
 }
 
-// Participants d'un post atelier
 interface PostParticipant { id: number; prenom: string; nom: string }
 interface PostParticipants {
   apprenantes: PostParticipant[]
-  benevoles: string[]    // noms (IDs référencent benevolesMock.liste)
-  formatrices: string[]  // noms libres
+  benevoles: string[]
+  formatrices: string[]
 }
 
 interface Evenement {
@@ -71,7 +69,7 @@ interface Post {
   categorie: CategoriePost
   date: string
   titre: string
-  brief?: string            // résumé/brief pour la génération IA (posts "autre")
+  brief?: string
   contenu?: string
   media?: MediaItem[]
   plateforme: Plateforme[]
@@ -79,12 +77,10 @@ interface Post {
   statut: ValidationStatus
   auteur: string
   evenement?: string | null
-  // Champs spécifiques aux posts "atelier"
   sessionId?: number | null
   participants?: PostParticipants
 }
 
-// Types slim pour la lecture cross-module (lecture seule)
 interface SessionSlim {
   id: number
   titre: string
@@ -94,7 +90,6 @@ interface SessionSlim {
   formatrice: string
 }
 
-// droitsImage n'existe pas encore — sera ajouté dans la fiche bénéficiaires (voir CLAUDE.md)
 interface BenefSlim {
   id: number
   prenom: string
@@ -115,10 +110,10 @@ const postsInitiaux: Post[] = [
 ]
 
 const KANBAN_COLS: { id: ValidationStatus; label: string; color: string }[] = [
-  { id: "brouillon",                label: "Brouillon",                color: "bg-slate-100 border-slate-200" },
-  { id: "en attente de validation", label: "En attente",               color: "bg-ateliers-light border-ateliers/30" },
-  { id: "validé",                   label: "Validé",                   color: "bg-finances-light border-finances/30" },
-  { id: "publié",                   label: "Publié",                   color: "bg-emerald-50 border-emerald-200" },
+  { id: "brouillon",                label: "Brouillon",  color: "bg-slate-100 border-slate-200" },
+  { id: "en attente de validation", label: "En attente", color: "bg-absences-light border-absences/30" },
+  { id: "validé",                   label: "Validé",     color: "bg-indigo-50 border-indigo-200" },
+  { id: "publié",                   label: "Publié",     color: "bg-emerald-50 border-emerald-200" },
 ]
 
 const PlatIcon = ({ p }: { p: Plateforme }) => {
@@ -136,11 +131,32 @@ const plateformeStyle: Record<Plateforme, string> = {
 // ──────────────────────────────────────────────
 // Calendrier éditorial
 // ──────────────────────────────────────────────
-function CalendrierTab({ posts, evenements }: { posts: Post[]; evenements: Evenement[] }) {
+function CalendrierTab({ posts, events, onNewPost }: { posts: Post[]; events: Evenement[]; onNewPost: (date: string) => void }) {
   const today = new Date("2026-05-20")
-  const year = today.getFullYear()
-  const month = today.getMonth()
-  const monthLabel = today.toLocaleDateString("fr-FR", { month: "long", year: "numeric" })
+  const [displayYear, setDisplayYear] = useState(today.getFullYear())
+  const [displayMonth, setDisplayMonth] = useState(today.getMonth())
+
+  const year = displayYear
+  const month = displayMonth
+  const monthLabel = new Date(year, month, 1).toLocaleDateString("fr-FR", { month: "long", year: "numeric" })
+
+  const minDate = new Date(today.getFullYear() - 1, today.getMonth(), 1)
+  const maxDate = new Date(today.getFullYear() + 2, today.getMonth(), 1)
+  const canGoPrev = new Date(year, month - 1, 1) >= minDate
+  const canGoNext = new Date(year, month + 1, 1) <= maxDate
+
+  function prevMonth() {
+    if (!canGoPrev) return
+    if (month === 0) { setDisplayYear(y => y - 1); setDisplayMonth(11) }
+    else { setDisplayMonth(m => m - 1) }
+  }
+
+  function nextMonth() {
+    if (!canGoNext) return
+    if (month === 11) { setDisplayYear(y => y + 1); setDisplayMonth(0) }
+    else { setDisplayMonth(m => m + 1) }
+  }
+
   const firstDay = new Date(year, month, 1).getDay()
   const daysInMonth = new Date(year, month + 1, 0).getDate()
   const offset = (firstDay + 6) % 7
@@ -156,18 +172,20 @@ function CalendrierTab({ posts, evenements }: { posts: Post[]; evenements: Evene
       }
     })
     return map
-  }, [posts])
-
-  const events = evenements.filter((e) => {
-    const d = new Date(e.date)
-    return d.getFullYear() === year && d.getMonth() === month
-  })
+  }, [posts, year, month])
 
   const statutDot: Record<ValidationStatus, string> = {
     brouillon:                  "bg-slate-300",
-    "en attente de validation": "bg-ateliers",
-    validé:                     "bg-finances",
+    "en attente de validation": "bg-absences",
+    validé:                     "bg-indigo-600",
     publié:                     "bg-emerald-500",
+  }
+
+  const statutBg: Record<ValidationStatus, string> = {
+    brouillon:                  "bg-slate-100 text-slate-600",
+    "en attente de validation": "bg-absences-light text-absences-dark",
+    validé:                     "bg-indigo-100 text-indigo-700",
+    publié:                     "bg-emerald-50 text-emerald-700",
   }
 
   const cells: (number | null)[] = [...Array(offset).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)]
@@ -176,7 +194,23 @@ function CalendrierTab({ posts, evenements }: { posts: Post[]; evenements: Evene
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold capitalize text-foreground">{monthLabel}</h2>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={prevMonth}
+            disabled={!canGoPrev}
+            className="p-1 rounded-lg hover:bg-slate-100 text-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          >
+            <ChevronRight size={16} className="rotate-180" />
+          </button>
+          <h2 className="text-base font-semibold capitalize text-foreground w-44 text-center">{monthLabel}</h2>
+          <button
+            onClick={nextMonth}
+            disabled={!canGoNext}
+            className="p-1 rounded-lg hover:bg-slate-100 text-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          >
+            <ChevronRight size={16} />
+          </button>
+        </div>
         <div className="flex items-center gap-3 text-xs text-muted">
           {Object.entries(statutDot).map(([s, c]) => (
             <span key={s} className="flex items-center gap-1"><span className={`w-2 h-2 rounded-full ${c}`} />{s}</span>
@@ -189,19 +223,33 @@ function CalendrierTab({ posts, evenements }: { posts: Post[]; evenements: Evene
       <div className="grid grid-cols-7 gap-1">
         {cells.map((day, i) => {
           if (!day) return <div key={i} />
-          const isToday = day === today.getDate()
+          const isToday = day === today.getDate() && year === today.getFullYear() && month === today.getMonth()
           const dayPosts = postsByDay[day] ?? []
-          const dayEvents = events.filter((e) => new Date(e.date).getDate() === day)
+          const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
+          const dayEvents = events.filter((e) => {
+            const d = new Date(e.date)
+            return d.getFullYear() === year && d.getMonth() === month && d.getDate() === day
+          })
           return (
-            <div key={i} className={`min-h-24 rounded-lg border p-1.5 text-xs ${isToday ? "border-ateliers bg-ateliers-light" : "border-border bg-surface hover:bg-slate-50"}`}>
+            <div
+              key={i}
+              onClick={() => onNewPost(dateStr)}
+              className={`min-h-24 rounded-lg border p-1.5 text-xs cursor-pointer ${isToday ? "border-ateliers bg-ateliers-light hover:bg-ateliers-light/80" : "border-border bg-surface hover:bg-slate-50"}`}
+            >
               <div className={`font-semibold mb-1 ${isToday ? "text-ateliers-dark" : "text-muted"}`}>{day}</div>
-              {dayEvents.map((e) => (
-                <div key={e.id} className="text-[10px] bg-absences-light text-absences-dark rounded px-1 py-0.5 mb-0.5 truncate font-medium">{e.nom}</div>
-              ))}
               {dayPosts.map((p) => (
-                <div key={p.id} className="flex items-center gap-1 mb-0.5">
+                <div
+                  key={p.id}
+                  onClick={(e) => e.stopPropagation()}
+                  className={`flex items-center gap-1 mb-0.5 px-1 py-0.5 rounded ${statutBg[p.statut]}`}
+                >
                   <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${statutDot[p.statut]}`} />
-                  <span className="truncate text-[10px] text-foreground">{p.titre}</span>
+                  <span className="truncate text-[10px] font-medium">{p.titre}</span>
+                </div>
+              ))}
+              {dayEvents.map((e) => (
+                <div key={e.id} className="text-[10px] text-absences-dark bg-absences-light px-1 py-0.5 rounded truncate mt-0.5">
+                  📅 {e.nom}
                 </div>
               ))}
             </div>
@@ -268,15 +316,8 @@ function EventsTab({ events, onEdit, onNew }: { events: Evenement[]; onEdit: (e:
 }
 
 // ──────────────────────────────────────────────
-// Kanban — clic sur la carte = édition directe
+// Kanban de validation
 // ──────────────────────────────────────────────
-const statutLabel: Record<ValidationStatus, { label: string; cls: string }> = {
-  brouillon:                  { label: "Brouillon",                cls: "bg-slate-100 text-slate-600" },
-  "en attente de validation": { label: "En attente de validation", cls: "bg-ateliers-light text-ateliers-dark" },
-  validé:                     { label: "Validé",                   cls: "bg-finances-light text-finances-dark" },
-  publié:                     { label: "Publié",                   cls: "bg-emerald-50 text-emerald-700" },
-}
-
 function KanbanTab({ posts, onChangeStatus, onEdit }: {
   posts: Post[]
   onChangeStatus: (id: number, status: ValidationStatus) => void
@@ -317,9 +358,8 @@ function KanbanTab({ posts, onChangeStatus, onEdit }: {
                       </span>
                     ))}
                   </div>
-                  <div className="flex items-center justify-between text-[10px] text-muted">
-                    <span>{p.auteur}</span>
-                    <span>{new Date(p.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</span>
+                  <div className="text-[10px] text-muted">
+                    {new Date(p.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
                   </div>
                   <div className="flex gap-1.5 mt-1" onClick={(e) => e.stopPropagation()}>
                     {p.statut === "brouillon" && (
@@ -475,7 +515,6 @@ const ALL_PLATEFORMES: Plateforme[] = ["LinkedIn", "Instagram", "Facebook"]
 export default function CommunicationPage() {
   const [tab, setTab] = useState<"calendrier" | "kanban" | "evenements" | "integrations">("calendrier")
 
-  // Posts
   const [posts, setPosts] = useState<Post[]>(postsInitiaux)
   const [slideOpen, setSlideOpen] = useState(false)
   const [editing, setEditing] = useState<Post | null>(null)
@@ -484,22 +523,17 @@ export default function CommunicationPage() {
   const [newFormatrice, setNewFormatrice] = useState("")
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Événements
   const [events, setEvents] = useState<Evenement[]>(eventsInitiaux)
   const [eventSlideOpen, setEventSlideOpen] = useState(false)
   const [editingEvent, setEditingEvent] = useState<Evenement | null>(null)
   const [eventForm, setEventForm] = useState<Omit<Evenement, "id">>(emptyEvent())
 
-  // Intégrations
   const [integrations, setIntegrations] = useState<IntegrationsConfig>(integrationsInitial)
   const [webhookTestStatus, setWebhookTestStatus] = useState<"idle" | "sending" | "ok" | "error">("idle")
 
-  // Données cross-module (lecture seule)
-  const [sessions, setSessions]         = useState<SessionSlim[]>([])
+  const [sessions, setSessions]           = useState<SessionSlim[]>([])
   const [beneficiaires, setBeneficiaires] = useState<BenefSlim[]>([])
-
-  // Génération IA
-  const [generating, setGenerating] = useState(false)
+  const [generating, setGenerating]       = useState(false)
   const [generateError, setGenerateError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -514,7 +548,6 @@ export default function CommunicationPage() {
   function persistEvents(data: Evenement[]) { setEvents(data); localStorage.setItem(STORAGE_EVENTS, JSON.stringify(data)) }
   function persistIntegrations(data: IntegrationsConfig) { setIntegrations(data); localStorage.setItem(STORAGE_INTEGRATIONS, JSON.stringify(data)) }
 
-  // ── Webhook ───────────────────────────────
   async function triggerWebhook(post: Post) {
     if (!integrations.zapierEnabled || !integrations.zapierWebhookUrl || integrations.method !== "zapier") return
     if (post.statut !== integrations.zapierTriggerOn) return
@@ -537,7 +570,6 @@ export default function CommunicationPage() {
     setTimeout(() => setWebhookTestStatus("idle"), 3000)
   }
 
-  // ── Posts CRUD ────────────────────────────
   function changeStatus(id: number, status: ValidationStatus) {
     const updated = posts.map((p) => p.id === id ? { ...p, statut: status } : p)
     persistPosts(updated)
@@ -548,6 +580,16 @@ export default function CommunicationPage() {
   function openNew() {
     setEditing(null)
     const p = emptyPost()
+    setForm(p)
+    setActivePlatformTab(p.plateforme[0] ?? "Instagram")
+    setNewFormatrice("")
+    setGenerateError(null)
+    setSlideOpen(true)
+  }
+
+  function openNewWithDate(date: string) {
+    setEditing(null)
+    const p = { ...emptyPost(), date }
     setForm(p)
     setActivePlatformTab(p.plateforme[0] ?? "Instagram")
     setNewFormatrice("")
@@ -578,7 +620,6 @@ export default function CommunicationPage() {
     if (!form.titre) { setGenerateError("Renseignez d'abord un titre."); return }
     if (form.categorie === "autre" && !form.brief?.trim()) { setGenerateError("Renseignez un brief pour guider la génération."); return }
     if (!form.plateforme.length) { setGenerateError("Sélectionnez au moins une plateforme."); return }
-
     setGenerating(true)
     try {
       const session = form.sessionId ? sessions.find(s => s.id === form.sessionId) : null
@@ -600,8 +641,6 @@ export default function CommunicationPage() {
       })
       const data = await res.json()
       if (!res.ok) { setGenerateError(data.error ?? "Erreur lors de la génération."); return }
-
-      // Merge generated content into form (merge plateformeContenu to keep existing overrides)
       setForm(f => ({
         ...f,
         contenu: data.contenu ?? f.contenu,
@@ -664,13 +703,9 @@ export default function CommunicationPage() {
     setForm(f => ({ ...f, media: (f.media ?? []).filter((_, i) => i !== index) }))
   }
 
-  // ── Participants (posts atelier) ──────────
   function handleSessionChange(val: string) {
     const id = val ? Number(val) : null
-    if (!id) {
-      setForm(f => ({ ...f, sessionId: null, participants: emptyParticipants() }))
-      return
-    }
+    if (!id) { setForm(f => ({ ...f, sessionId: null, participants: emptyParticipants() })); return }
     const session = sessions.find(s => s.id === id)
     if (!session) return
     const apprenantes = session.beneficiaireIds
@@ -681,11 +716,7 @@ export default function CommunicationPage() {
       .map(bid => benevolesMock.liste.find(bv => bv.id === bid))
       .filter(Boolean)
       .map(bv => bv!.nom)
-    setForm(f => ({
-      ...f,
-      sessionId: id,
-      participants: { apprenantes, benevoles, formatrices: session.formatrice ? [session.formatrice] : [] },
-    }))
+    setForm(f => ({ ...f, sessionId: id, participants: { apprenantes, benevoles, formatrices: session.formatrice ? [session.formatrice] : [] } }))
   }
 
   function removeApprenante(index: number) {
@@ -696,8 +727,7 @@ export default function CommunicationPage() {
     if (!bid) return
     const b = beneficiaires.find(b => b.id === Number(bid))
     if (!b) return
-    const already = form.participants?.apprenantes.some(a => a.id === b.id)
-    if (already) return
+    if (form.participants?.apprenantes.some(a => a.id === b.id)) return
     setForm(f => ({ ...f, participants: { ...f.participants!, apprenantes: [...f.participants!.apprenantes, { id: b.id, prenom: b.prenom, nom: b.nom }] } }))
   }
 
@@ -709,9 +739,8 @@ export default function CommunicationPage() {
     if (!val) return
     const bv = benevolesMock.liste.find(b => String(b.id) === val)
     if (!bv) return
-    const name = bv.nom
-    if (form.participants?.benevoles.includes(name)) return
-    setForm(f => ({ ...f, participants: { ...f.participants!, benevoles: [...f.participants!.benevoles, name] } }))
+    if (form.participants?.benevoles.includes(bv.nom)) return
+    setForm(f => ({ ...f, participants: { ...f.participants!, benevoles: [...f.participants!.benevoles, bv.nom] } }))
   }
 
   function removeFormatrice(index: number) {
@@ -725,7 +754,6 @@ export default function CommunicationPage() {
     setNewFormatrice("")
   }
 
-  // Calcul de la liste à flouter (apprenantes sans droitsImage)
   const flouterList = useMemo(() => {
     if (!form.participants?.apprenantes.length) return []
     return form.participants.apprenantes.filter(a => {
@@ -742,7 +770,6 @@ export default function CommunicationPage() {
     [form.participants?.apprenantes, beneficiaires]
   )
 
-  // ── Événements CRUD ───────────────────────
   function openNewEvent() { setEditingEvent(null); setEventForm(emptyEvent()); setEventSlideOpen(true) }
   function openEditEvent(e: Evenement) { setEditingEvent(e); setEventForm({ nom: e.nom, date: e.date, type: e.type }); setEventSlideOpen(true) }
 
@@ -760,11 +787,12 @@ export default function CommunicationPage() {
     setEventSlideOpen(false)
   }
 
-  // ── Stats ─────────────────────────────────
-  const aCreer  = posts.filter((p) => p.statut === "brouillon" || p.statut === "en attente de validation").length
-  const valides = posts.filter((p) => p.statut === "validé").length
+  const currentYear    = new Date().getFullYear()
+  const debutAnnee     = new Date(currentYear, 0, 1)
+  const nbBrouillons   = posts.filter((p) => p.statut === "brouillon").length
+  const valides        = posts.filter((p) => p.statut === "validé").length
+  const nbPubliesAnnee = posts.filter((p) => p.statut === "publié" && new Date(p.date) >= debutAnnee).length
 
-  // ── Helpers participants pour l'affichage des pills ──
   const availableBeneficiaires = beneficiaires.filter(b => !form.participants?.apprenantes.some(a => a.id === b.id))
   const availableBenevoles = benevolesMock.liste.filter(bv => !form.participants?.benevoles.includes(bv.nom))
 
@@ -782,10 +810,8 @@ export default function CommunicationPage() {
         )}
       </header>
 
-      {/* ── SlideOver post ── */}
       <SlideOver open={slideOpen} onClose={() => setSlideOpen(false)} title={editing ? "Modifier le post" : "Nouveau post"} width="lg">
         <form onSubmit={(e) => { e.preventDefault(); handleSave() }} className="flex flex-col gap-4">
-
           <FormRow>
             <Field label="Catégorie" required>
               <Select value={form.categorie} onChange={e => setForm(f => ({ ...f, categorie: e.target.value as CategoriePost, participants: e.target.value === "atelier" ? (f.participants ?? emptyParticipants()) : emptyParticipants() }))}>
@@ -807,19 +833,17 @@ export default function CommunicationPage() {
             <Input placeholder="Ex: Recap atelier HTML/CSS" value={form.titre} onChange={e => setForm(f => ({ ...f, titre: e.target.value }))} />
           </Field>
 
-          {/* Brief (posts "autre" uniquement) — utilisé comme contexte pour la génération IA */}
           {form.categorie === "autre" && (
             <Field label="Brief (contexte pour la génération IA)">
               <Textarea
                 rows={2}
-                placeholder="Décrivez en quelques mots ce que vous voulez communiquer (ex : on annonce les portes ouvertes du 7 juin, ambiance festive, public large)…"
+                placeholder="Décrivez en quelques mots ce que vous voulez communiquer…"
                 value={form.brief ?? ""}
                 onChange={e => setForm(f => ({ ...f, brief: e.target.value }))}
               />
             </Field>
           )}
 
-          {/* Bouton de génération IA */}
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-foreground">Contenu principal</span>
@@ -831,7 +855,7 @@ export default function CommunicationPage() {
               >
                 {generating
                   ? <><span className="w-3 h-3 border-2 border-ateliers border-t-transparent rounded-full animate-spin" /> Génération…</>
-                  : <>✨ Générer avec l'IA</>
+                  : <>✨ Générer avec l&apos;IA</>
                 }
               </button>
             </div>
@@ -841,7 +865,6 @@ export default function CommunicationPage() {
             <Textarea rows={5} placeholder="Texte du post… ou cliquez sur ✨ Générer avec l'IA" value={form.contenu ?? ""} onChange={e => setForm(f => ({ ...f, contenu: e.target.value }))} />
           </div>
 
-          {/* Médias */}
           <Field label="Images / Vidéos">
             <div className="space-y-2">
               {(form.media ?? []).length > 0 && (
@@ -866,7 +889,6 @@ export default function CommunicationPage() {
             </div>
           </Field>
 
-          {/* Plateformes */}
           <Field label="Plateformes">
             <div className="flex gap-2">
               {ALL_PLATEFORMES.map((pl) => (
@@ -879,7 +901,6 @@ export default function CommunicationPage() {
             </div>
           </Field>
 
-          {/* Personnalisation par plateforme */}
           {form.plateforme.length > 0 && (
             <Field label="Personnalisation par plateforme">
               <div className="space-y-3">
@@ -912,135 +933,114 @@ export default function CommunicationPage() {
             </Field>
           )}
 
-          {/* ── Section participants (posts atelier uniquement) ── */}
           {form.categorie === "atelier" && (
-            <>
-              <div className="border-t border-border pt-4">
-                <p className="text-sm font-semibold text-foreground flex items-center gap-1.5 mb-4">
-                  <Users size={14} /> Participants à l'atelier
-                </p>
+            <div className="border-t border-border pt-4 flex flex-col gap-4">
+              <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                <Users size={14} /> Participants à l&apos;atelier
+              </p>
 
-                {/* Session associée */}
-                <Field label="Session associée (optionnel)">
-                  <Select value={form.sessionId ?? ""} onChange={e => handleSessionChange(e.target.value)}>
-                    <option value="">— Sélectionner une session pour importer les participants —</option>
-                    {sessions.map(s => (
-                      <option key={s.id} value={s.id}>
-                        {new Date(s.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })} — {s.titre}
-                      </option>
-                    ))}
-                  </Select>
-                  {sessions.length === 0 && (
-                    <p className="text-[11px] text-muted mt-1">Aucune session trouvée — créez des ateliers dans le module Ateliers, ou ajoutez les participants manuellement.</p>
-                  )}
-                </Field>
-
-                {/* Apprenantes */}
-                <Field label="Apprenantes">
-                  <div className="space-y-2">
-                    {(form.participants?.apprenantes ?? []).length > 0 && (
-                      <div className="flex flex-wrap gap-1.5">
-                        {(form.participants?.apprenantes ?? []).map((a, i) => (
-                          <span key={i} className="flex items-center gap-1 bg-ateliers-light text-ateliers-dark text-xs px-2.5 py-1 rounded-full">
-                            {a.prenom} {a.nom}
-                            <button type="button" onClick={() => removeApprenante(i)} className="ml-0.5 opacity-60 hover:opacity-100"><X size={10} /></button>
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    {availableBeneficiaires.length > 0 && (
-                      <select onChange={e => { addApprenante(e.target.value); e.target.value = "" }} className="w-full text-xs border border-border rounded-xl px-3 py-2 bg-background text-muted focus:outline-none focus:ring-2 focus:ring-ateliers/30">
-                        <option value="">+ Ajouter une apprenante…</option>
-                        {availableBeneficiaires.map(b => (
-                          <option key={b.id} value={b.id}>{b.prenom} {b.nom}</option>
-                        ))}
-                      </select>
-                    )}
-                    {beneficiaires.length === 0 && (
-                      <p className="text-[11px] text-muted italic">Aucun bénéficiaire enregistré dans le module Bénéficiaires.</p>
-                    )}
-                  </div>
-                </Field>
-
-                {/* Bénévoles */}
-                <Field label="Bénévoles">
-                  <div className="space-y-2">
-                    {(form.participants?.benevoles ?? []).length > 0 && (
-                      <div className="flex flex-wrap gap-1.5">
-                        {(form.participants?.benevoles ?? []).map((nom, i) => (
-                          <span key={i} className="flex items-center gap-1 bg-benevoles-light text-benevoles-dark text-xs px-2.5 py-1 rounded-full">
-                            {nom}
-                            <button type="button" onClick={() => removeBenevole(i)} className="ml-0.5 opacity-60 hover:opacity-100"><X size={10} /></button>
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    {availableBenevoles.length > 0 && (
-                      <select onChange={e => { addBenevole(e.target.value); e.target.value = "" }} className="w-full text-xs border border-border rounded-xl px-3 py-2 bg-background text-muted focus:outline-none focus:ring-2 focus:ring-ateliers/30">
-                        <option value="">+ Ajouter un·e bénévole…</option>
-                        {availableBenevoles.map(bv => (
-                          <option key={bv.id} value={bv.id}>{bv.nom}</option>
-                        ))}
-                      </select>
-                    )}
-                  </div>
-                </Field>
-
-                {/* Enseignant·es / Formatrices */}
-                <Field label="Enseignant·es / Formatrices">
-                  <div className="space-y-2">
-                    {(form.participants?.formatrices ?? []).length > 0 && (
-                      <div className="flex flex-wrap gap-1.5">
-                        {(form.participants?.formatrices ?? []).map((nom, i) => (
-                          <span key={i} className="flex items-center gap-1 bg-finances-light text-finances-dark text-xs px-2.5 py-1 rounded-full">
-                            {nom}
-                            <button type="button" onClick={() => removeFormatrice(i)} className="ml-0.5 opacity-60 hover:opacity-100"><X size={10} /></button>
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        placeholder="Nom de l'enseignant·e…"
-                        value={newFormatrice}
-                        onChange={e => setNewFormatrice(e.target.value)}
-                        onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addFormatrice() } }}
-                        className="flex-1 text-xs border border-border rounded-xl px-3 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ateliers/30"
-                      />
-                      <button type="button" onClick={addFormatrice} className="px-3 py-2 text-xs font-medium bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 transition-colors whitespace-nowrap">
-                        + Ajouter
-                      </button>
-                    </div>
-                  </div>
-                </Field>
-
-                {/* Personnes à flouter */}
-                {(form.participants?.apprenantes ?? []).length > 0 && (
-                  <div className="rounded-xl border border-border bg-slate-50 p-3 space-y-2">
-                    <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                      Personnes à flouter sur les photos
-                    </p>
-                    {!droitsImageConfigured ? (
-                      <p className="text-[11px] text-muted italic">
-                        Le champ &laquo;droit à l'image&raquo; n'est pas encore configuré dans les fiches bénéficiaires.
-                        Une fois renseigné, cette liste affichera automatiquement les personnes sans accord.
-                      </p>
-                    ) : flouterList.length === 0 ? (
-                      <p className="text-[11px] text-emerald-700">✓ Tous les participants ont donné leur accord photo.</p>
-                    ) : (
-                      <div className="flex flex-wrap gap-1.5">
-                        {flouterList.map((a, i) => (
-                          <span key={i} className="text-xs bg-red-50 text-alert px-2.5 py-1 rounded-full font-medium">
-                            {a.prenom} {a.nom}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+              <Field label="Session associée (optionnel)">
+                <Select value={form.sessionId ?? ""} onChange={e => handleSessionChange(e.target.value)}>
+                  <option value="">— Sélectionner une session pour importer les participants —</option>
+                  {sessions.map(s => (
+                    <option key={s.id} value={s.id}>
+                      {new Date(s.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })} — {s.titre}
+                    </option>
+                  ))}
+                </Select>
+                {sessions.length === 0 && (
+                  <p className="text-[11px] text-muted mt-1">Aucune session trouvée — créez des ateliers dans le module Ateliers.</p>
                 )}
-              </div>
-            </>
+              </Field>
+
+              <Field label="Apprenantes">
+                <div className="space-y-2">
+                  {(form.participants?.apprenantes ?? []).length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {(form.participants?.apprenantes ?? []).map((a, i) => (
+                        <span key={i} className="flex items-center gap-1 bg-ateliers-light text-ateliers-dark text-xs px-2.5 py-1 rounded-full">
+                          {a.prenom} {a.nom}
+                          <button type="button" onClick={() => removeApprenante(i)} className="ml-0.5 opacity-60 hover:opacity-100"><X size={10} /></button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {availableBeneficiaires.length > 0 && (
+                    <select onChange={e => { addApprenante(e.target.value); e.target.value = "" }} className="w-full text-xs border border-border rounded-xl px-3 py-2 bg-background text-muted focus:outline-none focus:ring-2 focus:ring-ateliers/30">
+                      <option value="">+ Ajouter une apprenante…</option>
+                      {availableBeneficiaires.map(b => <option key={b.id} value={b.id}>{b.prenom} {b.nom}</option>)}
+                    </select>
+                  )}
+                  {beneficiaires.length === 0 && <p className="text-[11px] text-muted italic">Aucun bénéficiaire enregistré.</p>}
+                </div>
+              </Field>
+
+              <Field label="Bénévoles">
+                <div className="space-y-2">
+                  {(form.participants?.benevoles ?? []).length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {(form.participants?.benevoles ?? []).map((nom, i) => (
+                        <span key={i} className="flex items-center gap-1 bg-benevoles-light text-benevoles-dark text-xs px-2.5 py-1 rounded-full">
+                          {nom}
+                          <button type="button" onClick={() => removeBenevole(i)} className="ml-0.5 opacity-60 hover:opacity-100"><X size={10} /></button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {availableBenevoles.length > 0 && (
+                    <select onChange={e => { addBenevole(e.target.value); e.target.value = "" }} className="w-full text-xs border border-border rounded-xl px-3 py-2 bg-background text-muted focus:outline-none focus:ring-2 focus:ring-ateliers/30">
+                      <option value="">+ Ajouter un·e bénévole…</option>
+                      {availableBenevoles.map(bv => <option key={bv.id} value={bv.id}>{bv.nom}</option>)}
+                    </select>
+                  )}
+                </div>
+              </Field>
+
+              <Field label="Enseignant·es / Formatrices">
+                <div className="space-y-2">
+                  {(form.participants?.formatrices ?? []).length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {(form.participants?.formatrices ?? []).map((nom, i) => (
+                        <span key={i} className="flex items-center gap-1 bg-finances-light text-finances-dark text-xs px-2.5 py-1 rounded-full">
+                          {nom}
+                          <button type="button" onClick={() => removeFormatrice(i)} className="ml-0.5 opacity-60 hover:opacity-100"><X size={10} /></button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Nom de l'enseignant·e…"
+                      value={newFormatrice}
+                      onChange={e => setNewFormatrice(e.target.value)}
+                      onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addFormatrice() } }}
+                      className="flex-1 text-xs border border-border rounded-xl px-3 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ateliers/30"
+                    />
+                    <button type="button" onClick={addFormatrice} className="px-3 py-2 text-xs font-medium bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 transition-colors whitespace-nowrap">+ Ajouter</button>
+                  </div>
+                </div>
+              </Field>
+
+              {(form.participants?.apprenantes ?? []).length > 0 && (
+                <div className="rounded-xl border border-border bg-slate-50 p-3 space-y-2">
+                  <p className="text-xs font-semibold text-foreground">Personnes à flouter sur les photos</p>
+                  {!droitsImageConfigured ? (
+                    <p className="text-[11px] text-muted italic">
+                      Le champ &laquo;droit à l&apos;image&raquo; n&apos;est pas encore configuré dans les fiches bénéficiaires.
+                    </p>
+                  ) : flouterList.length === 0 ? (
+                    <p className="text-[11px] text-emerald-700">✓ Tous les participants ont donné leur accord photo.</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-1.5">
+                      {flouterList.map((a, i) => (
+                        <span key={i} className="text-xs bg-red-50 text-alert px-2.5 py-1 rounded-full font-medium">{a.prenom} {a.nom}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           )}
 
           <FormRow>
@@ -1064,7 +1064,6 @@ export default function CommunicationPage() {
         </form>
       </SlideOver>
 
-      {/* ── SlideOver événement ── */}
       <SlideOver open={eventSlideOpen} onClose={() => setEventSlideOpen(false)} title={editingEvent ? `Modifier — ${editingEvent.nom}` : "Nouvel événement"} width="md">
         <form onSubmit={(e) => { e.preventDefault(); handleSaveEvent() }} className="flex flex-col gap-4">
           <Field label="Nom de l'événement" required>
@@ -1085,29 +1084,27 @@ export default function CommunicationPage() {
         </form>
       </SlideOver>
 
-      {/* Stats */}
       <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="bg-communication-light rounded-xl border border-communication/20 p-4">
-          <p className="text-3xl font-bold text-communication-dark">{aCreer}</p>
-          <p className="text-sm text-communication-dark/70 mt-1">En cours de rédaction</p>
+        <div className="bg-slate-100 rounded-xl border border-slate-200 p-4">
+          <p className="text-3xl font-bold text-slate-700">{nbBrouillons}</p>
+          <p className="text-sm text-slate-500 mt-1">En cours de rédaction</p>
         </div>
         <div className="bg-finances-light rounded-xl border border-finances/20 p-4">
           <p className="text-3xl font-bold text-finances-dark">{valides}</p>
           <p className="text-sm text-finances-dark/70 mt-1">Validés à publier</p>
         </div>
-        <div className="bg-surface rounded-xl border border-border p-4">
-          <p className="text-3xl font-bold text-foreground">{events.length}</p>
-          <p className="text-sm text-muted mt-1">Événements programmés</p>
+        <div className="bg-emerald-50 rounded-xl border border-emerald-200 p-4">
+          <p className="text-3xl font-bold text-emerald-700">{nbPubliesAnnee}</p>
+          <p className="text-sm text-emerald-600/70 mt-1">Publiés en {currentYear}</p>
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="flex gap-1 mb-6 bg-slate-100 p-1 rounded-lg w-fit">
         {([
-          { id: "calendrier",   icon: <Calendar size={14} />,    label: "Calendrier" },
-          { id: "kanban",       icon: <Columns3 size={14} />,    label: "Validation" },
+          { id: "calendrier",   icon: <Calendar size={14} />,     label: "Calendrier" },
+          { id: "kanban",       icon: <Columns3 size={14} />,     label: "Validation" },
           { id: "evenements",   icon: <CalendarDays size={14} />, label: "Événements" },
-          { id: "integrations", icon: <Shuffle size={14} />,     label: "Intégrations" },
+          { id: "integrations", icon: <Shuffle size={14} />,      label: "Intégrations" },
         ] as const).map(t => (
           <button
             key={t.id}
@@ -1121,7 +1118,7 @@ export default function CommunicationPage() {
         ))}
       </div>
 
-      {tab === "calendrier"   && <CalendrierTab posts={posts} evenements={events} />}
+      {tab === "calendrier"   && <CalendrierTab posts={posts} events={events} onNewPost={openNewWithDate} />}
       {tab === "kanban"       && <KanbanTab posts={posts} onChangeStatus={changeStatus} onEdit={openEdit} />}
       {tab === "evenements"   && <EventsTab events={events} onEdit={openEditEvent} onNew={openNewEvent} />}
       {tab === "integrations" && <IntegrationsTab config={integrations} onChange={persistIntegrations} onTest={testWebhook} testStatus={webhookTestStatus} />}
