@@ -516,7 +516,8 @@ function GroupesTab({
   // ── Filtres ──
   const [search, setSearch]               = useState("")
   const [filterAtelier, setFilterAtelier] = useState<string>("tous")
-  const [filterType, setFilterType]       = useState<TypeGroupe | "tous">("tous")
+  // Filtre par nom de groupe — saisi dans l'en-tete de la colonne "Groupe".
+  const [filterGroupe, setFilterGroupe]   = useState<string>("")
 
   // ── Tri ──
   type SortKey = "atelier" | "groupe" | "effectif"
@@ -548,13 +549,17 @@ function GroupesTab({
 
   // ── Filtrage ──
   const q = search.trim().toLowerCase()
+  const fg = filterGroupe.trim().toLowerCase()
   const filtered = groupes.filter(g => {
     if (filterAtelier === "sans") {
       if (g.atelierId !== null) return false
     } else if (filterAtelier !== "tous") {
       if (String(g.atelierId) !== filterAtelier) return false
     }
-    if (filterType !== "tous" && g.type !== filterType) return false
+    // Filtre saisi directement dans la colonne "Groupe" (nom + type matchent).
+    if (fg && !g.nom.toLowerCase().includes(fg) && !g.type.toLowerCase().includes(fg)) {
+      return false
+    }
     if (!q) return true
     if (g.nom.toLowerCase().includes(q)) return true
     if (getAtelierTitre(g.atelierId).toLowerCase().includes(q)) return true
@@ -577,15 +582,11 @@ function GroupesTab({
     return 0
   })
 
-  // ── Stats ──
-  const benefsPlaces = new Set(groupes.flatMap(g => g.beneficiaireIds)).size
-  const totalActifs  = beneficiaires.filter(b => b.statut === "actif").length
-
-  const filtreActif = q !== "" || filterAtelier !== "tous" || filterType !== "tous"
+  const filtreActif = q !== "" || filterAtelier !== "tous" || filterGroupe !== ""
   function resetFiltres() {
     setSearch("")
     setFilterAtelier("tous")
-    setFilterType("tous")
+    setFilterGroupe("")
   }
 
   // Sous-composant : en-tête de colonne triable
@@ -607,24 +608,6 @@ function GroupesTab({
 
   return (
     <div className="space-y-4">
-      {/* ── Stats bar ── */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-ateliers-light rounded-xl border border-ateliers/20 p-4">
-          <p className="text-3xl font-bold text-ateliers-dark">{groupes.length}</p>
-          <p className="text-sm text-ateliers-dark/70 mt-1">Groupe{groupes.length > 1 ? "s" : ""} au total</p>
-        </div>
-        <div className="bg-surface rounded-xl border border-border p-4">
-          <p className="text-3xl font-bold text-foreground">{benefsPlaces}</p>
-          <p className="text-sm text-muted mt-1">
-            Bénéficiaires placés <span className="text-[11px]">/ {totalActifs} actifs</span>
-          </p>
-        </div>
-        <div className="bg-surface rounded-xl border border-border p-4">
-          <p className="text-3xl font-bold text-foreground">{ateliersAvecGroupes.length}</p>
-          <p className="text-sm text-muted mt-1">Atelier{ateliersAvecGroupes.length > 1 ? "s" : ""} avec composition</p>
-        </div>
-      </div>
-
       {/* ── Filtres ── */}
       <div className="flex items-center gap-2 flex-wrap">
         <div className="relative flex-1 min-w-48">
@@ -653,16 +636,6 @@ function GroupesTab({
           ))}
           {aGroupesManuels && <option value="sans">— Groupes manuels —</option>}
         </select>
-        <select
-          value={filterType}
-          onChange={e => setFilterType(e.target.value as TypeGroupe | "tous")}
-          className="text-sm rounded-xl border border-border bg-surface px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ateliers/30"
-        >
-          <option value="tous">Tous types</option>
-          <option value="niveau">Niveau (homogène)</option>
-          <option value="mixte">Mixte (hétérogène)</option>
-          <option value="âge">Âge</option>
-        </select>
         {filtreActif && (
           <button type="button" onClick={resetFiltres} className="text-xs text-muted hover:text-foreground hover:underline">
             Réinitialiser
@@ -689,6 +662,34 @@ function GroupesTab({
                   Aperçu des membres
                 </th>
                 <th className="w-10 px-2" aria-label="Actions" />
+              </tr>
+              {/* 2e ligne d'en-tête : filtres par colonne (uniquement Groupe pour l'instant) */}
+              <tr className="border-b border-border bg-surface">
+                <th className="px-4 py-1.5" />
+                <th className="px-4 py-1.5">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Filtrer par nom ou type…"
+                      value={filterGroupe}
+                      onChange={e => setFilterGroupe(e.target.value)}
+                      className="w-full text-xs px-2 py-1 rounded-md border border-border bg-surface focus:outline-none focus:ring-2 focus:ring-ateliers/30"
+                    />
+                    {filterGroupe && (
+                      <button
+                        type="button"
+                        onClick={() => setFilterGroupe("")}
+                        className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted hover:text-foreground"
+                        aria-label="Effacer le filtre"
+                      >
+                        <X size={11} />
+                      </button>
+                    )}
+                  </div>
+                </th>
+                <th className="px-4 py-1.5" />
+                <th className="px-4 py-1.5" />
+                <th className="px-2 py-1.5" />
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
