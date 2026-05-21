@@ -13,6 +13,9 @@ import {
   emptyFiche,
   migrateFiche,
   encadrantsRequis,
+  formatPeriode,
+  dureePeriode,
+  periodeValide,
   type FicheAtelier,
 } from "@/lib/atelier"
 import {
@@ -240,6 +243,13 @@ function AteliersTab({
             <span>⏱ {s.duree}</span>
             {s.salle     && <span>📍 {s.salle}</span>}
             {s.formatrice && <span>👩‍🏫 {s.formatrice}</span>}
+            {periodeValide(s.dateDebut, s.dateFin) && (
+              <span className="text-ateliers-dark font-medium flex items-center gap-1">
+                <CalendarDays size={10} />
+                {formatPeriode(s.dateDebut, s.dateFin)}
+                <span className="text-muted">· {dureePeriode(s.dateDebut, s.dateFin)}</span>
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-4 mt-2 flex-wrap">
             {benefs.length > 0 && (
@@ -869,6 +879,59 @@ export default function AteliersPage() {
               />
             </Field>
           </FormRow>
+
+          {/* ── Période (vacances scolaires) ── */}
+          <div className="rounded-xl border border-border bg-surface/50 p-3">
+            <p className="text-xs font-semibold text-foreground uppercase tracking-wider mb-1">
+              Période concernée
+            </p>
+            <p className="text-[11px] text-muted mb-3">
+              Optionnel — utile si l&apos;atelier s&apos;étend sur plusieurs séances
+              (ex : vacances scolaires).
+            </p>
+            <FormRow>
+              <Field label="Date de début">
+                <Input
+                  type="date"
+                  value={sessionForm.dateDebut ?? ""}
+                  onChange={e => setSessionForm(f => ({
+                    ...f, dateDebut: e.target.value === "" ? null : e.target.value,
+                  }))}
+                />
+              </Field>
+              <Field label="Date de fin">
+                <Input
+                  type="date"
+                  value={sessionForm.dateFin ?? ""}
+                  min={sessionForm.dateDebut ?? undefined}
+                  onChange={e => setSessionForm(f => ({
+                    ...f, dateFin: e.target.value === "" ? null : e.target.value,
+                  }))}
+                />
+              </Field>
+            </FormRow>
+            {(() => {
+              const label = formatPeriode(sessionForm.dateDebut, sessionForm.dateFin)
+              const duree = dureePeriode(sessionForm.dateDebut, sessionForm.dateFin)
+              if (label) {
+                return (
+                  <p className="mt-2 text-xs text-ateliers-dark bg-ateliers-light px-3 py-1.5 rounded-lg inline-flex items-center gap-2">
+                    <CalendarDays size={11} /> <span className="font-medium">{label}</span>
+                    <span className="text-muted">· {duree}</span>
+                  </p>
+                )
+              }
+              if (sessionForm.dateDebut && sessionForm.dateFin) {
+                return (
+                  <p className="mt-2 text-xs text-red-700 bg-red-50 px-3 py-1.5 rounded-lg inline-flex items-center gap-1">
+                    <AlertTriangle size={11} /> La date de fin doit être après la date de début.
+                  </p>
+                )
+              }
+              return null
+            })()}
+          </div>
+
           <FormRow>
             <Field label="Durée">
               <Input

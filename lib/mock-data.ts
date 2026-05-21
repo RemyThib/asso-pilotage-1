@@ -36,7 +36,7 @@ export const ateliers = {
   sessions: [
     {
       id: 1, titre: "Atelier théâtre — expression orale", description: "Travail de l'élocution et de la prise de parole en public à travers le jeu théâtral.",
-      date: "2026-05-21", heure: "14h00", duree: "2h", salle: "Salle A", formatrice: "Somayeh",
+      date: "2026-04-13", heure: "14h00", duree: "2h", salle: "Salle A", formatrice: "Somayeh",
       beneficiaireIds: [1, 3, 4], benevoleIds: [1], statut: "planifié",
       competencesCiblees: ["expressionOrale", "comprehensionOrale"],
       ageMin: 6, ageMax: 9, tailleGroupeCible: 8, ratioEncadrement: null, mixerNiveaux: false,
@@ -44,6 +44,8 @@ export const ateliers = {
       besoins: ["Salle avec espace dégagé", "Accessoires (chapeaux, foulards)", "1 formatrice + 1 bénévole"],
       etapes: ["Présentation des participants (10 min)", "Échauffement vocal (20 min)", "Lecture des scripts (30 min)", "Jeu et restitution (50 min)", "Débrief collectif (10 min)"],
       personnesImpliqueesIds: [2, 4],
+      // Vacances de printemps 2026 (zone B)
+      dateDebut: "2026-04-13", dateFin: "2026-04-24",
     },
     {
       id: 2, titre: "Logique & Algorithmie", description: "Résolution de problèmes et pensée computationnelle.",
@@ -52,10 +54,12 @@ export const ateliers = {
       competencesCiblees: ["comprehensionEcrite", "expressionEcrite"],
       ageMin: 10, ageMax: 13, tailleGroupeCible: 10, ratioEncadrement: null, mixerNiveaux: false,
       taches: [], besoins: [], etapes: [], personnesImpliqueesIds: [],
+      // Séance unique : pas de période
+      dateDebut: null, dateFin: null,
     },
     {
       id: 3, titre: "Atelier exposé", description: "Préparation et présentation d'un exposé court, en binôme avec accompagnement renforcé.",
-      date: "2026-05-24", heure: "09h30", duree: "3h", salle: "Salle B", formatrice: "Nadia",
+      date: "2026-07-08", heure: "09h30", duree: "3h", salle: "Salle B", formatrice: "Nadia",
       beneficiaireIds: [5], benevoleIds: [3], statut: "planifié",
       competencesCiblees: ["expressionOrale", "expressionEcrite"],
       ageMin: 14, ageMax: 18, tailleGroupeCible: 8, ratioEncadrement: 2, mixerNiveaux: false,
@@ -63,14 +67,18 @@ export const ateliers = {
       besoins: ["1 bénévole pour 2 bénéficiaires", "Salle avec tableau", "Ordinateurs (1 par binôme)"],
       etapes: ["Choix du sujet (30 min)", "Recherche documentaire (45 min)", "Rédaction du plan (45 min)", "Répétitions en binôme (45 min)", "Présentation au groupe (15 min)"],
       personnesImpliqueesIds: [3, 4, 5],
+      // Premières semaines des vacances d'été
+      dateDebut: "2026-07-06", dateFin: "2026-07-17",
     },
     {
       id: 4, titre: "Initiation HTML/CSS — séance 1", description: "Découverte des bases du web.",
-      date: "2026-05-07", heure: "14h00", duree: "2h", salle: "Salle A", formatrice: "Somayeh",
+      date: "2026-02-23", heure: "14h00", duree: "2h", salle: "Salle A", formatrice: "Somayeh",
       beneficiaireIds: [1, 3, 4], benevoleIds: [1], statut: "terminé",
       competencesCiblees: ["comprehensionEcrite"],
       ageMin: 6, ageMax: 9, tailleGroupeCible: 8, ratioEncadrement: null, mixerNiveaux: false,
       taches: [], besoins: [], etapes: [], personnesImpliqueesIds: [],
+      // Vacances d'hiver 2026 (zone B)
+      dateDebut: "2026-02-23", dateFin: "2026-03-06",
     },
   ],
   // Bénéficiaires (enfants + contact parent)

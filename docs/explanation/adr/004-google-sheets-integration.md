@@ -105,6 +105,9 @@ Identité & planning :
 Public ciblé & paramètres de composition :
 | ageMin | ageMax | tailleGroupeCible | ratioEncadrement | mixerNiveaux |
 
+Période (utile pour les ateliers étalés sur des vacances scolaires) :
+| dateDebut | dateFin |
+
 Compétences ciblées (4 colonnes booléennes : VRAI/FAUX) :
 | comp_comprehensionEcrite | comp_comprehensionOrale | comp_expressionEcrite | comp_expressionOrale |
 
