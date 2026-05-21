@@ -330,9 +330,6 @@ export default function BrouillonGroupesTab(props: {
                       </span>
                     ) : null
                   })}
-                  {(atelier.ageMin !== null || atelier.ageMax !== null) && (
-                    <span className="text-[10px] text-muted">· {atelier.ageMin ?? "?"}-{atelier.ageMax ?? "?"} ans</span>
-                  )}
                   {atelier.tailleGroupeCible !== null && (
                     <span className="text-[10px] text-muted">· groupes de {atelier.tailleGroupeCible}</span>
                   )}
@@ -431,7 +428,11 @@ export default function BrouillonGroupesTab(props: {
                       color="slate"
                       icon={<Users size={11} />}
                       titre={`Hors tranche d'âge (${brouillon.horsTranche.length})`}
-                      sousTitre={`Cible : ${atelier.ageMin}-${atelier.ageMax} ans`}
+                      sousTitre={
+                        atelier.ageMin !== null && atelier.ageMax !== null
+                          ? `Cible : ${atelier.ageMin}-${atelier.ageMax} ans`
+                          : "Bénéficiaires placés en attente"
+                      }
                       membres={brouillon.horsTranche.map(id => benefById(id)).filter((b): b is Beneficiaire => !!b)}
                     />
                   )}

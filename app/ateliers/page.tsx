@@ -232,11 +232,6 @@ function AteliersTab({
                   </span>
                 ) : null
               })}
-              {(s.ageMin !== null || s.ageMax !== null) && (
-                <span className="text-[10px] text-muted ml-1">
-                  · {s.ageMin ?? "?"}-{s.ageMax ?? "?"} ans
-                </span>
-              )}
             </div>
           )}
           <div className="flex items-center gap-3 mt-1.5 flex-wrap text-xs text-muted">
@@ -810,31 +805,15 @@ export default function AteliersPage() {
             )}
           </div>
 
-          {/* ── Public ciblé ── */}
+          {/* ── Paramètres de groupage ── */}
           <div className="rounded-xl border border-border bg-surface/50 p-3">
             <p className="text-xs font-semibold text-foreground uppercase tracking-wider mb-3">
-              Public ciblé
+              Paramètres de groupage
             </p>
-            <FormRow>
-              <Field label="Âge min">
-                <Input
-                  type="number" min={6} max={18} placeholder="6"
-                  value={sessionForm.ageMin ?? ""}
-                  onChange={e => setSessionForm(f => ({
-                    ...f, ageMin: e.target.value === "" ? null : Number(e.target.value),
-                  }))}
-                />
-              </Field>
-              <Field label="Âge max">
-                <Input
-                  type="number" min={6} max={18} placeholder="18"
-                  value={sessionForm.ageMax ?? ""}
-                  onChange={e => setSessionForm(f => ({
-                    ...f, ageMax: e.target.value === "" ? null : Number(e.target.value),
-                  }))}
-                />
-              </Field>
-            </FormRow>
+            <p className="text-[11px] text-muted mb-3">
+              Définissent comment l&apos;algorithme construira les groupes du brouillon.
+              L&apos;âge des bénéficiaires est géré automatiquement par tranches (6-9, 10-13, 14-18 ans).
+            </p>
             <FormRow>
               <Field label="Taille de groupe cible">
                 <Input

@@ -399,7 +399,22 @@ export default function BeneficiairesPage() {
                 </Field>
               </FormRow>
               <Field label="Date de naissance">
-                <Input type="date" value={form.dateNaissance} onChange={e => setForm(f => ({ ...f, dateNaissance: e.target.value }))} />
+                <div className="flex items-center gap-3">
+                  <Input
+                    type="date"
+                    value={form.dateNaissance}
+                    onChange={e => setForm(f => ({ ...f, dateNaissance: e.target.value }))}
+                  />
+                  {(() => {
+                    const age = computeAge(form.dateNaissance)
+                    if (age === null) return null
+                    return (
+                      <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-ateliers-light text-ateliers-dark shrink-0">
+                        → {age} an{age > 1 ? "s" : ""}
+                      </span>
+                    )
+                  })()}
+                </div>
               </Field>
               <FormRow>
                 <Field label="Email (optionnel si enfant)">
