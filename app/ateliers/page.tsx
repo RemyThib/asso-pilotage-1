@@ -436,10 +436,12 @@ export default function AteliersPage() {
         : [...f.beneficiaireIds, id],
     }))
   }
-  function selectBenevoleInSession(id: number) {
+  function toggleBenevoleInSession(id: number) {
     setSessionForm(f => ({
       ...f,
-      benevoleIds: f.benevoleIds.includes(id) ? [] : [id],
+      benevoleIds: f.benevoleIds.includes(id)
+        ? f.benevoleIds.filter(x => x !== id)
+        : [...f.benevoleIds, id],
     }))
   }
   function importGroupeIntoSession(groupeId: number) {
@@ -646,8 +648,8 @@ export default function AteliersPage() {
             </Field>
           </FormRow>
 
-          {/* Bénévole — max 1 selection */}
-          <Field label="Bénévole">
+          {/* Bénévoles — multi-select */}
+          <Field label="Bénévoles">
             <div className="flex flex-wrap gap-2">
               {benevoles.map(bv => {
                 const sel = sessionForm.benevoleIds.includes(bv.id)
@@ -655,7 +657,7 @@ export default function AteliersPage() {
                   <button
                     type="button"
                     key={bv.id}
-                    onClick={() => selectBenevoleInSession(bv.id)}
+                    onClick={() => toggleBenevoleInSession(bv.id)}
                     className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-colors ${
                       sel
                         ? "bg-benevoles text-white border-benevoles"
