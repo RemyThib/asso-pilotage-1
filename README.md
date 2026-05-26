@@ -1,7 +1,7 @@
 # Asso Pilotage
 
-Dashboard de pilotage pour une association de formation numérique.
-**Next.js 16 · Tailwind v4 · TypeScript · localStorage**
+Dashboard de pilotage pour une association de formation numérique (Ada Tech School).
+**Next.js 16.2.6 · React 19 · Tailwind v4 · TypeScript · localStorage**
 
 🌐 **Production** : [asso-inky.vercel.app](https://asso-inky.vercel.app)
 📦 **Repo** : [github.com/anais0210/asso-pilotage](https://github.com/anais0210/asso-pilotage)
@@ -59,12 +59,15 @@ Pour comprendre pourquoi les choses sont faites ainsi.
 | Vue d'ensemble | `/dashboard` | KPIs globaux, alertes |
 | Émargement | `/emargement` | Présences par séance |
 | Absences | `/absences` | Suivi + appels parents |
+| Assiduité | `/assiduite` | Hub assiduité global par atelier |
+| Bénéficiaires | `/beneficiaires` | Hub Élèves / Parents unifié (CRUD + droits image) |
 | Finances | `/finances` | Demandes + inscriptions |
 | Ateliers | `/ateliers` | Planning, notes, groupes |
-| Communication | `/communication` | Calendrier éditorial + kanban |
+| Communication | `/communication` | Calendrier éditorial + kanban IA (Claude) |
 | Bénévoles | `/benevoles` | Disponibilités + événements |
 | Membres | `/membres` | Annuaire équipe |
 | Roadmap | `/roadmap` | Matrice impact/facilité |
+| Mon compte | `/compte` | Profil + changement de mot de passe |
 
 ---
 
