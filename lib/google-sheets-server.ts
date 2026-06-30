@@ -46,6 +46,22 @@ export async function getHeaders(sheets: Sheets, sheetName: string): Promise<str
   return (res.data.values?.[0] as string[]) ?? []
 }
 
+/** Ajoute une colonne (en-tête) à la feuille si elle n'existe pas encore. */
+export async function ensureColumn(
+  sheets: Sheets,
+  sheetName: string,
+  columnName: string
+): Promise<void> {
+  const headers = await getHeaders(sheets, sheetName)
+  if (headers.includes(columnName)) return
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${sheetName}!${colLetter(headers.length + 1)}1`,
+    valueInputOption: "RAW",
+    requestBody: { values: [[columnName]] },
+  })
+}
+
 export async function appendRow(
   sheets: Sheets,
   sheetName: string,

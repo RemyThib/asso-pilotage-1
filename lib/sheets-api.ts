@@ -3,6 +3,7 @@
 // Couche d'accès Google Sheets — nouvelle base structurée
 // ──────────────────────────────────────────────
 
+// Route interne Next.js (API REST Google Sheets v4 côté serveur — voir app/api/sheets/route.ts)
 const API_URL = "/api/sheets"
 
 // ── Types correspondant à la nouvelle base ─────
@@ -59,28 +60,19 @@ export interface InscriptionSheet {
   Date_Inscription: string
   Beneficiaire: string
   Montant_Adhesion: string | number
+  Montant_Du?: string | number
   Remarques: string
 }
 
 export interface PaiementSheet {
   ID_Paiement: string
   ID_Membre: string
+  ID_Inscription?: string
   Date_Paiement: string
   Montant: string | number
   Mode_Paiement: string
   Date_Depot_Banque: string
   Date_Virement: string
-}
-
-export interface TacheSheet {
-  ID_Tache: string
-  Cible_Type: "Membre" | "Famille" | string
-  Cible_ID: string
-  Titre: string
-  Echeance: string            // ISO AAAA-MM-JJ
-  Statut: "A faire" | "Fait" | string
-  Assigne_A: string
-  Date_Creation: string
 }
 
 // ── Helpers ────────────────────────────────────
@@ -178,22 +170,22 @@ export async function deleteMembre(idMembre: string): Promise<{ ok: boolean }> {
   return apiPost({ action: "deleteMembre", idMembre }) as Promise<{ ok: boolean }>
 }
 
-// ── Tâches ──────────────────────────────────────
+// ── Paiements (écriture) ────────────────────────
 
-export async function fetchTaches(cibleType: string, cibleId: string): Promise<TacheSheet[]> {
-  return apiGet("getTaches", { cibleType, cibleId }) as Promise<TacheSheet[]>
+export async function addPaiement(data: Partial<PaiementSheet>): Promise<{ ok: boolean, ID_Paiement: string }> {
+  return apiPost({ action: "addPaiement", data }) as Promise<{ ok: boolean, ID_Paiement: string }>
 }
 
-export async function addTache(data: Partial<TacheSheet>): Promise<{ ok: boolean, ID_Tache: string }> {
-  return apiPost({ action: "addTache", data }) as Promise<{ ok: boolean, ID_Tache: string }>
+export async function updatePaiement(idPaiement: string, data: Partial<PaiementSheet>): Promise<{ ok: boolean }> {
+  return apiPost({ action: "updatePaiement", idPaiement, data }) as Promise<{ ok: boolean }>
 }
 
-export async function updateTache(idTache: string, data: Partial<TacheSheet>): Promise<{ ok: boolean }> {
-  return apiPost({ action: "updateTache", idTache, data }) as Promise<{ ok: boolean }>
+export async function deletePaiement(idPaiement: string): Promise<{ ok: boolean }> {
+  return apiPost({ action: "deletePaiement", idPaiement }) as Promise<{ ok: boolean }>
 }
 
-export async function deleteTache(idTache: string): Promise<{ ok: boolean }> {
-  return apiPost({ action: "deleteTache", idTache }) as Promise<{ ok: boolean }>
+export async function updateInscription(idInscription: string, data: Partial<InscriptionSheet>): Promise<{ ok: boolean }> {
+  return apiPost({ action: "updateInscription", idInscription, data }) as Promise<{ ok: boolean }>
 }
 
 // ── Indicateur de configuration ────────────────

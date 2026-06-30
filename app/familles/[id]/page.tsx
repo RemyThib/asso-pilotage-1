@@ -6,8 +6,7 @@ import { useRouter } from "next/navigation"
 import SlideOver, { Field, Input, Select, FormRow, SaveButton, DeleteButton } from "@/components/SlideOver"
 import JournalSuivi from "@/components/JournalSuivi"
 import AdresseAutocomplete from "@/components/AdresseAutocomplete"
-import TachesBlock from "@/components/TachesBlock"
-import { ChevronRight, Pencil, Plus, MapPin } from "lucide-react"
+import { ChevronRight, Pencil, Plus, MapPin, Upload } from "lucide-react"
 import {
   fetchFamilles, fetchMembres, updateFamille, addMembre, deleteMembre,
   type FamilleSheet, type MembreSheet
@@ -46,6 +45,7 @@ export default function FicheFamillePage({ params }: { params: Promise<{ id: str
   const [slideOpen, setSlideOpen] = useState(false)
   const [slideMode, setSlideMode] = useState<"edit" | "add">("edit")
   const [familleForm, setFamilleForm] = useState<Partial<FamilleSheet>>({})
+  const [membreFichier, setMembreFichier] = useState<File | null>(null)
   const [membreForm, setMembreForm]   = useState<Partial<MembreSheet>>(emptyMembre(id))
 
   const loadData = useCallback(async () => {
@@ -84,6 +84,7 @@ export default function FicheFamillePage({ params }: { params: Promise<{ id: str
     await addMembre(membreForm)
     await loadData()
     setMembreForm(emptyMembre(id))
+    setMembreFichier(null)
     setSlideOpen(false)
   }
 
@@ -113,7 +114,6 @@ export default function FicheFamillePage({ params }: { params: Promise<{ id: str
       <div className="flex items-start justify-between mb-6 gap-4">
         <div>
           <h1 className="text-2xl font-bold text-familles-dark">{famille.Nom_Famille}</h1>
-          <p className="text-xs text-muted mt-0.5">{id}</p>
         </div>
         <button
           onClick={() => { setFamilleForm({ Nom_Famille: famille.Nom_Famille, Adresse: famille.Adresse, Code_Postal: famille.Code_Postal, Ville: famille.Ville, Quartier_QVP: famille.Quartier_QVP }); setSlideMode("edit"); setSlideOpen(true) }}
@@ -156,7 +156,7 @@ export default function FicheFamillePage({ params }: { params: Promise<{ id: str
           <span className="ml-2 text-xs font-normal text-muted">({membres.length})</span>
         </h2>
         <button
-          onClick={() => { setMembreForm(emptyMembre(id)); setSlideMode("add"); setSlideOpen(true) }}
+          onClick={() => { setMembreForm(emptyMembre(id)); setMembreFichier(null); setSlideMode("add"); setSlideOpen(true) }}
           className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-familles text-white text-sm font-medium hover:bg-familles-dark transition-colors"
         >
           <Plus size={14} />
@@ -203,9 +203,8 @@ export default function FicheFamillePage({ params }: { params: Promise<{ id: str
         })}
       </div>
 
-      {/* Tâches + journal de suivi de la famille */}
+      {/* Journal de suivi de la famille */}
       <div className="mt-8">
-        <TachesBlock cibleType="Famille" cibleId={id} />
         <JournalSuivi notes={famille.Notes} onSave={handleSaveNotes} allowCall={false} allowEmail={false} />
       </div>
 
@@ -282,6 +281,20 @@ export default function FicheFamillePage({ params }: { params: Promise<{ id: str
               <option value="SUSPENDU">SUSPENDU</option>
               <option value="ARRÊTÉ">ARRÊTÉ</option>
             </Select>
+          </Field>
+          <Field label="Document">
+            <label className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-border bg-surface text-sm text-muted cursor-pointer hover:border-familles transition-colors w-fit">
+              <Upload size={15} />
+              Choisir un fichier
+              <input
+                type="file"
+                className="hidden"
+                onChange={e => setMembreFichier(e.target.files?.[0] ?? null)}
+              />
+            </label>
+            {membreFichier && (
+              <p className="text-xs text-muted mt-1.5">{membreFichier.name}</p>
+            )}
           </Field>
           <SaveButton />
         </form>

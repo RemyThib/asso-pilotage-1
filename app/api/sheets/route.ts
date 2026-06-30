@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import {
   getSheetsClient, SPREADSHEET_ID,
-  sheetToObjects, appendRow, updateRowById, deleteRowById, deleteRowsWhere, nextId, fmtDate, parseDateFr,
+  sheetToObjects, appendRow, updateRowById, deleteRowById, deleteRowsWhere, nextId, fmtDate, parseDateFr, ensureColumn,
 } from "@/lib/google-sheets-server"
 
 type Sheets = ReturnType<typeof getSheetsClient>
@@ -34,8 +34,6 @@ export async function GET(request: NextRequest) {
         return ok(await getMembre(sheets, searchParams.get("idMembre")!))
       case "getPaiements":
         return ok(await getPaiements(sheets, searchParams.get("idMembre")!))
-      case "getTaches":
-        return ok(await getTaches(sheets, searchParams.get("cibleType")!, searchParams.get("cibleId")!))
       case "getEvenements":
         return ok(await getEvenements(sheets, searchParams.get("categorie") ?? undefined))
       case "getAssiduite":
@@ -63,9 +61,10 @@ export async function POST(request: NextRequest) {
       case "addMembre":       return ok(await addMembre(sheets, body.data))
       case "updateMembre":    return ok(await updateMembre(sheets, body.idMembre, body.data))
       case "deleteMembre":    return ok(await deleteMembre(sheets, body.idMembre))
-      case "addTache":        return ok(await addTache(sheets, body.data))
-      case "updateTache":     return ok(await updateTache(sheets, body.idTache, body.data))
-      case "deleteTache":     return ok(await deleteTache(sheets, body.idTache))
+      case "addPaiement":     return ok(await addPaiement(sheets, body.data))
+      case "updatePaiement":  return ok(await updatePaiement(sheets, body.idPaiement, body.data))
+      case "deletePaiement":  return ok(await deletePaiement(sheets, body.idPaiement))
+      case "updateInscription": return ok(await updateInscription(sheets, body.idInscription, body.data))
       case "addEvenement":    return ok(await addEvenement(sheets, body.data))
       case "updateEvenement": return ok(await updateEvenement(sheets, body.idEvenement, body.data))
       case "deleteEvenement": return ok(await deleteEvenement(sheets, body.idEvenement))
@@ -164,19 +163,13 @@ async function getPaiements(sheets: Sheets, idMembre: string) {
     .map((pay) => ({
       ID_Paiement: String(pay["ID"]),
       ID_Membre: String(idMembre),
+      ID_Inscription: String(pay["Inscription ID"]),
       Date_Paiement: fmtDate(pay["Date de paiement"] as string),
       Montant: pay["Montant"],
       Mode_Paiement: pay["Mode de paiement"],
       Date_Depot_Banque: fmtDate(pay["Date de depot banque"] as string),
       Date_Virement: fmtDate(pay["Date de virement"] as string),
     }))
-}
-
-async function getTaches(sheets: Sheets, cibleType: string, cibleId: string) {
-  const taches = await sheetToObjects(sheets, "TACHE")
-  return taches
-    .filter((t) => String(t["Cible_Type"]) === String(cibleType) && String(t["Cible_ID"]) === String(cibleId))
-    .map(mapTache)
 }
 
 async function getEvenements(sheets: Sheets, categorie?: string) {
@@ -350,36 +343,48 @@ async function deleteMembre(sheets: Sheets, idMembre: string) {
   return deleted ? { ok: true } : { error: "Personne introuvable" }
 }
 
-// ── ÉCRITURE TÂCHE ────────────────────────────────────────
+// ── ÉCRITURE PAIEMENT ─────────────────────────────────────
 
-async function addTache(sheets: Sheets, data: Record<string, unknown>) {
-  const id = await nextId(sheets, "TACHE")
-  await appendRow(sheets, "TACHE", {
+async function addPaiement(sheets: Sheets, data: Record<string, unknown>) {
+  const id = await nextId(sheets, "PAIEMENT")
+  await appendRow(sheets, "PAIEMENT", {
     "ID": id,
-    "Cible_Type": data.Cible_Type ?? "",
-    "Cible_ID": data.Cible_ID ?? "",
-    "Titre": data.Titre ?? "",
-    "Echeance": data.Echeance ?? "",
-    "Statut": data.Statut ?? "A faire",
-    "Assigne_A": data.Assigne_A ?? "",
-    "Date_Creation": new Date().toISOString().split("T")[0],
+    "Inscription ID": data.ID_Inscription ?? "",
+    "Date de paiement": parseDateFr(String(data.Date_Paiement ?? "")),
+    "Montant": data.Montant ?? "",
+    "Mode de paiement": data.Mode_Paiement ?? "",
   })
-  return { ok: true, ID_Tache: String(id) }
+  return { ok: true, ID_Paiement: String(id) }
 }
 
-async function updateTache(sheets: Sheets, idTache: string, data: Record<string, unknown>) {
+async function updatePaiement(sheets: Sheets, idPaiement: string, data: Record<string, unknown>) {
   const map: Record<string, unknown> = {}
-  if (data.Titre !== undefined)     map["Titre"] = data.Titre
-  if (data.Echeance !== undefined)  map["Echeance"] = data.Echeance
-  if (data.Statut !== undefined)    map["Statut"] = data.Statut
-  if (data.Assigne_A !== undefined) map["Assigne_A"] = data.Assigne_A
-  const ok = await updateRowById(sheets, "TACHE", idTache, map)
-  return ok ? { ok: true } : { error: "Tâche introuvable" }
+  if (data.ID_Inscription !== undefined) map["Inscription ID"] = data.ID_Inscription
+  if (data.Date_Paiement !== undefined)  map["Date de paiement"] = parseDateFr(String(data.Date_Paiement))
+  if (data.Montant !== undefined)        map["Montant"] = data.Montant
+  if (data.Mode_Paiement !== undefined)  map["Mode de paiement"] = data.Mode_Paiement
+  const ok = await updateRowById(sheets, "PAIEMENT", idPaiement, map)
+  return ok ? { ok: true } : { error: "Paiement introuvable" }
 }
 
-async function deleteTache(sheets: Sheets, idTache: string) {
-  const ok = await deleteRowById(sheets, "TACHE", idTache)
-  return ok ? { ok: true } : { error: "Tâche introuvable" }
+async function deletePaiement(sheets: Sheets, idPaiement: string) {
+  const ok = await deleteRowById(sheets, "PAIEMENT", idPaiement)
+  return ok ? { ok: true } : { error: "Paiement introuvable" }
+}
+
+// ── ÉCRITURE INSCRIPTION ──────────────────────────────────
+
+async function updateInscription(sheets: Sheets, idInscription: string, data: Record<string, unknown>) {
+  const map: Record<string, unknown> = {}
+  if (data.Montant_Du !== undefined) {
+    await ensureColumn(sheets, "INSCRIPTION", "Montant du")
+    map["Montant du"] = data.Montant_Du
+  }
+  if (data.Montant_Adhesion !== undefined) map["Montant adhesion"] = data.Montant_Adhesion
+  if (data.Statut !== undefined)           map["Statut"] = data.Statut
+  if (data.Niveau !== undefined)           map["Niveau / Classe"] = data.Niveau
+  const ok = await updateRowById(sheets, "INSCRIPTION", idInscription, map)
+  return ok ? { ok: true } : { error: "Inscription introuvable" }
 }
 
 // ── ÉCRITURE ÉVÉNEMENT ────────────────────────────────────
@@ -521,20 +526,8 @@ function mapInscription(i: Record<string, unknown>) {
     Date_Inscription: fmtDate(i["Date d'inscription"] as string),
     Beneficiaire: i["Beneficiaire"],
     Montant_Adhesion: i["Montant adhesion"],
+    Montant_Du: i["Montant du"] !== undefined && i["Montant du"] !== "" ? i["Montant du"] : "",
     Remarques: i["Remarques"],
-  }
-}
-
-function mapTache(t: Record<string, unknown>) {
-  return {
-    ID_Tache: String(t["ID"]),
-    Cible_Type: t["Cible_Type"],
-    Cible_ID: String(t["Cible_ID"]),
-    Titre: t["Titre"],
-    Echeance: t["Echeance"] ? String(t["Echeance"]) : "",
-    Statut: t["Statut"] ?? "A faire",
-    Assigne_A: t["Assigne_A"] ?? "",
-    Date_Creation: t["Date_Creation"] ? String(t["Date_Creation"]) : "",
   }
 }
 
