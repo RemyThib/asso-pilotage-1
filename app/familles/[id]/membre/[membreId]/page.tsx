@@ -405,39 +405,8 @@ export default function FicheMembrePage({ params }: { params: Promise<{ id: stri
           </div>
         )}
 
-        {paiements.length === 0 ? (
-          <p className="text-sm text-muted italic">
-            {inscriptions.length > 0 ? "Aucun paiement. Cliquez sur « Paiement » pour en ajouter un." : "Aucune inscription : impossible d'ajouter un paiement."}
-          </p>
-        ) : (
-          <div className="space-y-2">
-            {paiements.map(p => (
-              <div key={p.ID_Paiement} className="flex items-center justify-between gap-3 bg-slate-50 rounded-lg px-4 py-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <span className="text-sm font-bold text-familles-dark shrink-0">
-                    {p.Montant ? `${p.Montant} €` : "—"}
-                  </span>
-                  {p.Mode_Paiement && (
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-familles-light text-familles-dark">
-                      {p.Mode_Paiement}
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-3 shrink-0">
-                  <div className="text-right">
-                    <p className="text-sm font-medium text-foreground">{p.Date_Paiement || "—"}</p>
-                    {p.Date_Virement && (
-                      <p className="text-xs text-muted">Virement {p.Date_Virement}</p>
-                    )}
-                  </div>
-                  <button onClick={() => openEditPaiement(p)} aria-label="Modifier ce paiement" title="Modifier"
-                    className="p-1.5 rounded-lg text-muted hover:text-familles-dark hover:bg-familles-light transition-colors">
-                    <Pencil size={14} />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+        {inscriptions.length === 0 && (
+          <p className="text-sm text-muted italic">Aucune inscription : impossible d'ajouter un paiement.</p>
         )}
       </div>
 
