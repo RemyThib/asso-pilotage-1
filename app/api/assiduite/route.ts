@@ -7,11 +7,15 @@
 // ──────────────────────────────────────────────────────────────
 import { NextResponse } from "next/server"
 import { fetchAssiduiteData } from "@/lib/assiduite-server"
+import { getServerUser } from "@/lib/supabase/server"
 
 export const runtime = "nodejs"        // googleapis requiert Node
 export const dynamic = "force-dynamic" // rendu dynamique ; cache court géré dans la lib (TTL 60 s)
 
 export async function GET() {
+  if (!(await getServerUser())) {
+    return NextResponse.json({ error: "Non authentifié." }, { status: 401 })
+  }
   try {
     const data = await fetchAssiduiteData()
     return NextResponse.json(data)
