@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import SlideOver, { Field, Input, Select, FormRow, SaveButton, DeleteButton } from "@/components/SlideOver"
 import JournalSuivi from "@/components/JournalSuivi"
 import AdresseAutocomplete from "@/components/AdresseAutocomplete"
+import DateInput from "@/components/DateInput"
 import { ChevronRight, Pencil, Plus, MapPin } from "lucide-react"
 import {
   fetchFamilles, fetchMembres, updateFamille, addMembre, deleteMembre,
@@ -279,6 +280,9 @@ export default function FicheFamillePage({ params }: { params: Promise<{ id: str
               <option value="SUSPENDU">SUSPENDU</option>
               <option value="ARRÊTÉ">ARRÊTÉ</option>
             </Select>
+          </Field>
+          <Field label="Date d'inscription">
+            <DateInput value={membreForm.Date_Inscription} onChange={v => setMembreForm(f => ({ ...f, Date_Inscription: v }))} />
           </Field>
           <SaveButton />
         </form>
