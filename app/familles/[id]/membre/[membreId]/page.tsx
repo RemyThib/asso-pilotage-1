@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import SlideOver, { Field, Input, Select, FormRow, SaveButton, DeleteButton } from "@/components/SlideOver"
 import JournalSuivi from "@/components/JournalSuivi"
+import DateInput from "@/components/DateInput"
 import { ChevronRight, Plus, Pencil, Upload, FileText, ExternalLink, X } from "lucide-react"
 import {
   fetchFamilles, fetchMembre, updateMembre, deleteMembre, fetchPaiements,
@@ -459,7 +460,7 @@ export default function FicheMembrePage({ params }: { params: Promise<{ id: stri
               <Input type="number" value={String(payForm.Montant ?? "")} onChange={e => setPayForm(f => ({ ...f, Montant: e.target.value }))} />
             </Field>
             <Field label="Date de paiement">
-              <Input placeholder="JJ/MM/AAAA" value={String(payForm.Date_Paiement ?? "")} onChange={e => setPayForm(f => ({ ...f, Date_Paiement: e.target.value }))} />
+              <DateInput value={payForm.Date_Paiement != null ? String(payForm.Date_Paiement) : ""} onChange={v => setPayForm(f => ({ ...f, Date_Paiement: v }))} />
             </Field>
           </FormRow>
           <Field label="Mode de paiement">
@@ -516,7 +517,7 @@ export default function FicheMembrePage({ params }: { params: Promise<{ id: stri
             </Field>
           </FormRow>
           <Field label="Date de naissance">
-            <Input placeholder="JJ/MM/AAAA" value={String(form.Date_Naissance ?? "")} onChange={e => setForm(f => ({ ...f, Date_Naissance: e.target.value }))} />
+            <DateInput value={form.Date_Naissance != null ? String(form.Date_Naissance) : ""} onChange={v => setForm(f => ({ ...f, Date_Naissance: v }))} />
           </Field>
           <FormRow>
             <Field label="Niveau">
@@ -538,6 +539,9 @@ export default function FicheMembrePage({ params }: { params: Promise<{ id: stri
               </Select>
             </Field>
           </FormRow>
+          <Field label="Date d'inscription">
+            <DateInput value={form.Date_Inscription != null ? String(form.Date_Inscription) : ""} onChange={v => setForm(f => ({ ...f, Date_Inscription: v }))} />
+          </Field>
           <SaveButton />
           <DeleteButton onClick={handleDelete} />
         </form>
