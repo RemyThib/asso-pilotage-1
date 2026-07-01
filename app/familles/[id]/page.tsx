@@ -263,6 +263,9 @@ export default function FicheFamillePage({ params }: { params: Promise<{ id: str
           <Field label="Langue maternelle">
             <Input value={String(membreForm.Langue_Maternelle ?? "")} onChange={e => setMembreForm(f => ({ ...f, Langue_Maternelle: e.target.value }))} />
           </Field>
+          <Field label="Date de naissance">
+            <DateInput value={membreForm.Date_Naissance} onChange={v => setMembreForm(f => ({ ...f, Date_Naissance: v }))} />
+          </Field>
           <Field label="Niveau">
             <Select value={String(membreForm.Niveau ?? "")} onChange={e => setMembreForm(f => ({ ...f, Niveau: e.target.value }))}>
               <option value="">— Choisir —</option>
