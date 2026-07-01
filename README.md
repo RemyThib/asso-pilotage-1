@@ -34,6 +34,7 @@ Pour accomplir une tâche précise, quand on sait ce qu'on veut faire.
 - [Ajouter un nouveau module](docs/how-to/add-new-module.md)
 - [Ajouter le CRUD à un module](docs/how-to/add-crud-to-module.md)
 - [Déployer sur Vercel](docs/how-to/deploy.md)
+- [Migrer le projet vers l'association](docs/how-to/migration-association.md)
 
 ### 📖 Reference — Référence technique
 Pour savoir comment quelque chose fonctionne.

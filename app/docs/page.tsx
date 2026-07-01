@@ -71,6 +71,13 @@ const categories: DocCategory[] = [
         badgeColor: "bg-finances-light text-finances-dark",
         description: "Déploiement automatique via GitHub, checklist avant push, rollback et variables d'environnement.",
       },
+      {
+        href: "/docs/how-to/migration",
+        label: "Migrer vers l'association",
+        badge: "How-to",
+        badgeColor: "bg-finances-light text-finances-dark",
+        description: "Passation : transférer GitHub, Vercel, Google (compte de service + Sheet/Drive) et Anthropic vers les comptes de l'asso.",
+      },
     ],
   },
   {
